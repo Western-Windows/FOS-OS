@@ -10,7 +10,6 @@
 
 #include <kern/cpu/sched_helpers.h>
 #include <kern/conc/spinlock.h>
-
 //===================================================================================
 //TODO: [PROJECT'24.MS1 - #00 GIVENS] [4] LOCKS - Channel struct & initialization
 struct Channel
