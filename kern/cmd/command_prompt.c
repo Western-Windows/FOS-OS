@@ -452,17 +452,67 @@ int execute_command(char *command_string)
 	return 0;
 }
 
+int letter_found(char ch, char *str)
+{
+	for (int i = 0; i < strlen(str); i++){
+		if (str[i] == ch){
+			return i;
+		}
+	}
+	return -1;
+}
+
+bool seq_found(char *str1, char *str2)
+{
+
+	char *ptr1,*ptr2;
+	ptr1 = str1;
+	ptr2 = str2;
+	int str1Len = strlen(str1);
+	int str2Len = strlen(str2);
+	while(1){
+		if (ptr2 == str2 + str2Len)
+			return 1;
+		if (ptr1 == str1 + str1Len)
+			return 0;
+		if (*ptr1 == *ptr2){
+			ptr2++;
+		}
+		ptr1++;
+	}
+
+}
 
 int process_command(int number_of_arguments, char** arguments)
 {
 	//TODO: [PROJECT'24.MS1 - #01] [1] PLAY WITH CODE! - process_command
-
+	LIST_INIT(&foundCommands);
 	for (int i = 0; i < NUM_OF_COMMANDS; i++)
 	{
 		if (strcmp(arguments[0], commands[i].name) == 0)
 		{
-			return i;
+			if (number_of_arguments - 1 == commands[i].num_of_args || (commands[i].num_of_args == -1 && number_of_arguments - 1 >= 1))
+			{
+				return i;
+			}
+			else
+			{
+				LIST_INSERT_HEAD(&foundCommands, &commands[i]);
+				return CMD_INV_NUM_ARGS;
+			}
 		}
+	}
+	int cmdLength = strlen(arguments[0]);
+	for (int i = 0; i < NUM_OF_COMMANDS; i++)
+	{
+
+		if (seq_found(commands[i].name,arguments[0])){
+			LIST_INSERT_TAIL(&foundCommands, &commands[i]);
+		}
+	}
+	if (LIST_SIZE(&foundCommands) > 0)
+	{
+		return CMD_MATCHED;
 	}
 	return CMD_INVALID;
 }

@@ -33,6 +33,7 @@ void get_into_prompt() __attribute__((noreturn));
 
 /*2024*/
 int process_command(int number_of_arguments, char** arguments);
-
+int letter_found(char ch, char *str);
+bool seq_found(char *str1, char *str2);
 
 #endif	// !FOS_KERN_MONITOR_H
