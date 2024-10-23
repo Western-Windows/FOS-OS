@@ -30,9 +30,16 @@ void sleep(struct Channel *chan, struct spinlock* lk)
 {
 	//TODO: [PROJECT'24.MS1 - #10] [4] LOCKS - sleep
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("sleep is not implemented yet");
+	//panic("sleep is not implemented yet");
 	//Your Code is Here...
-
+	release_spinlock(lk);
+	acquire_spinlock(&ProcessQueues.qlock);
+	struct Env *cur = get_cpu_proc();
+	cur->env_status = ENV_BLOCKED;
+	enqueue(&chan->queue, cur);
+	sched();
+	release_spinlock(&ProcessQueues.qlock);
+	acquire_spinlock(lk);
 }
 
 //==================================================
@@ -46,8 +53,22 @@ void wakeup_one(struct Channel *chan)
 {
 	//TODO: [PROJECT'24.MS1 - #11] [4] LOCKS - wakeup_one
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("wakeup_one is not implemented yet");
+	//panic("wakeup_one is not implemented yet");
 	//Your Code is Here...
+	acquire_spinlock(&ProcessQueues.qlock);
+	if(queue_size(&(chan->queue)) > 0){
+		struct Env *temp = dequeue(&chan->queue);
+			if(temp == NULL){
+				return;
+			}else{
+				temp->env_status = ENV_READY;
+				sched_insert_ready0(temp);
+			}
+	}else{
+		return;
+	}
+	release_spinlock(&ProcessQueues.qlock);
+
 }
 
 //====================================================
@@ -62,8 +83,22 @@ void wakeup_all(struct Channel *chan)
 {
 	//TODO: [PROJECT'24.MS1 - #12] [4] LOCKS - wakeup_all
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("wakeup_all is not implemented yet");
+	//panic("wakeup_all is not implemented yet");
 	//Your Code is Here...
-
+	acquire_spinlock(&ProcessQueues.qlock);
+	while (queue_size(&(chan->queue)) > 0){
+		if(queue_size(&(chan->queue)) > 0){
+				struct Env *temp = dequeue(&chan->queue);
+					if(temp == NULL){
+						return;
+					}else{
+						temp->env_status = ENV_READY;
+						sched_insert_ready0(temp);
+					}
+			}else{
+				return;
+			}
+	}
+	release_spinlock(&ProcessQueues.qlock);
 }
 
