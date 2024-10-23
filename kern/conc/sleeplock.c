@@ -29,13 +29,21 @@ int holding_sleeplock(struct sleeplock *lk)
 	return r;
 }
 //==========================================================================
-
+struct spinlock guardSpinLock;
 void acquire_sleeplock(struct sleeplock *lk)
 {
 	//TODO: [PROJECT'24.MS1 - #13] [4] LOCKS - acquire_sleeplock
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("acquire_sleeplock is not implemented yet");
 	//Your Code is Here...
+	acquire_spinlock(&guardSpinLock);
+	while(lk->locked == 1){
+		struct Env *curThread = get_cpu_proc();
+		enqueue(&(*lk).chan.queue, curThread);
+		sleep(&(*lk).chan,&guardSpinLock);
+	}
+	(lk)->locked = 1;
+	release_spinlock(&guardSpinLock);
 }
 
 void release_sleeplock(struct sleeplock *lk)
@@ -44,7 +52,12 @@ void release_sleeplock(struct sleeplock *lk)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("release_sleeplock is not implemented yet");
 	//Your Code is Here...
-
+	acquire_spinlock(&guardSpinLock);
+	if (queue_size(&(*lk).chan.queue) > 0){
+		wakeup_all(&(*lk).chan);
+	}
+	(lk)->locked = 0;
+	release_spinlock(&guardSpinLock);
 }
 
 
