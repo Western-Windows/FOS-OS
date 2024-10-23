@@ -139,8 +139,39 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 {
 	//TODO: [PROJECT'24.MS1 - #05] [3] DYNAMIC ALLOCATOR - set_block_data
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("set_block_data is not implemented yet");
-	//Your Code is Here...
+	//panic("set_block_data is not implemented yet");
+
+
+	// Checking if the "totalSize" is even or odd.
+	if (totalSize % 2 == 1) // odd "totalSize"
+	{
+		totalSize++; 		// "totalSize" is even, LSB = 0.
+	}
+	// else, even no addition needed.
+
+	uint32 maskedLSBSize = totalSize;
+
+	// Adding the "isAllocated" bit (LSB) to "totalSize".
+	if (isAllocated == 1)
+	{
+		totalSize++;		// LSB = 1 -> Allocated.
+	}
+	// else, LSB = 0 -> Free.
+
+	// setting the block header and footer data.
+	va = (uint32*)va;  // original (constant) virtual address.
+	uint32* tempVa1 = va;
+
+	uint32* blockHeader = --tempVa1;
+	*blockHeader = totalSize;
+
+	uint32* tempVa2 = va;
+
+	uint32 metaDataFreeSize = maskedLSBSize - (2 * sizeof(int));
+	uint32 numberOfJumps = metaDataFreeSize / sizeof(int);
+
+	uint32* blockFooter = tempVa2 + numberOfJumps;
+	*blockFooter = totalSize;
 }
 
 
