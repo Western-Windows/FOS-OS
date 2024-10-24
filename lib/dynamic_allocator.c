@@ -192,8 +192,83 @@ void free_block(void *va)
 {
 	//TODO: [PROJECT'24.MS1 - #07] [3] DYNAMIC ALLOCATOR - free_block
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("free_block is not implemented yet");
+	//panic("free_block is not implemented yet");
 	//Your Code is Here...
+
+	if(is_free_block(va)) // If block is already free
+	{
+		return;
+	}
+	if(va == 0) // If block is NULL
+	{
+		return;
+	}
+
+	// Insert block into list (sorted)
+	struct BlockElement* free_block = (struct BlockElement*) va;
+	list_insertion_sort(free_block);
+
+	// Get address of next and previous blocks
+	uint32 block_size = get_block_size(va);
+	uint32 next_va = (uint32)va + block_size;
+	uint32 prev_va = (uint32)va - block_size;
+	bool next_empty, prev_empty;
+
+	// Check if consecutive blocks are empty
+	if (is_free_block((uint32*) prev_va))
+	{
+		prev_empty = 1;
+	}
+	if (is_free_block((uint32*) next_va))
+	{
+		next_empty = 1;
+	}
+
+	uint32* new_va;
+	uint32 new_size;
+	struct BlockElement* prev =  LIST_PREV(free_block);
+	struct BlockElement* next =  LIST_NEXT(free_block);
+
+	// Case: Merge with left and right blocks
+	if (prev_empty && next_empty)
+	{
+		new_va = (uint32*) prev_va; // Set va of merged block to left block
+		new_size = block_size + get_block_size(prev) + get_block_size(next);
+
+		// Remove extra va's since they will be merged into one block
+		LIST_REMOVE(&freeBlocksList, next);
+		LIST_REMOVE(&freeBlocksList, free_block);
+	}
+
+	// Case: Merge with left block
+	else if(prev_empty)
+	{
+		new_va = (uint32*) prev_va; // Set va of merged block to left block
+		new_size = block_size + get_block_size(prev);
+
+		// Remove extra va since they will be merged into one block
+		LIST_REMOVE(&freeBlocksList, free_block);
+	}
+
+	// Case: Merge with right block
+	else if(next_empty)
+	{
+		new_va = (uint32*) va; // Set va of merged block to the new (left) block
+		new_size = block_size + get_block_size(next);
+		// Remove extra va since they will be merged into one block
+		LIST_REMOVE(&freeBlocksList, next);
+	}
+
+	// Case: No merging
+	else
+	{
+		new_va = (uint32*) va;
+		new_size = block_size;
+	}
+
+	// Update block data
+	set_block_data(new_va, new_size, 0);
+	return;
 }
 
 //=========================================
@@ -226,4 +301,70 @@ void *alloc_block_NF(uint32 size)
 {
 	panic("alloc_block_NF is not implemented yet");
 	return NULL;
+}
+
+/********************Helper Functions***************************/
+
+void list_insertion_sort(struct BlockElement* free_block)
+{
+	if (free_block == 0) // If it's NULL
+	{
+		return;
+	}
+	if(LIST_EMPTY(&freeBlocksList)) // Empty list
+	{
+		LIST_INSERT_HEAD(&freeBlocksList, free_block);
+		return;
+	}
+
+	struct BlockElement* current_block;
+	LIST_FOREACH(current_block, &freeBlocksList)
+	{
+		// Check Head
+		if (current_block == LIST_FIRST(&freeBlocksList))
+		{
+
+			if (free_block < current_block) // If block is smaller than head, block becomes head
+			{
+				cprintf("%x at head\n", free_block);
+				LIST_INSERT_HEAD(&freeBlocksList, free_block);
+				break;
+			}
+			continue; // Else skip the head (to avoid NULL pointers in the checks)
+		}
+		// Check Tail
+		else if (current_block == LIST_LAST(&freeBlocksList)) // If block is greater than tail, block becomes tail
+		{
+			if (free_block > current_block)
+			{
+				cprintf("%x at tail\n", free_block);
+				LIST_INSERT_TAIL(&freeBlocksList, free_block);
+				break;
+			}
+			continue; // Else skip the tail (to avoid NULL pointers in the checks)
+		}
+		else if (free_block == current_block) // If block already exists
+		{
+			break;
+		}
+		else
+		{
+			// If block should be before current block
+			if (free_block < current_block && free_block > LIST_PREV(current_block))
+			{
+				cprintf("%x before %x \n", free_block, current_block);
+				LIST_INSERT_BEFORE(&freeBlocksList, current_block, free_block);
+				break;
+			}
+			// If block should be after current block
+			else if(free_block > current_block && free_block < LIST_NEXT(current_block))
+			{
+				cprintf("%x after %x \n", free_block, current_block);
+				LIST_INSERT_AFTER(&freeBlocksList, current_block, free_block);
+				break;
+			}
+		}
+	}
+
+	return;
 }
