@@ -20,6 +20,7 @@
 #include "../tests/test_dynamic_allocator.h"
 #include "../tests/test_scheduler.h"
 
+
 struct Test tests[] = {
 		{"3functions", "Env Load: test the creation of new dir, tables and pages WS", tst_three_creation_functions},
 		{"kfreeall", "Kernel Heap: test kfreeall (freed frames, mem access...etc)", tst_kfreeall},
@@ -213,6 +214,10 @@ int tst_dyn_alloc(int number_of_arguments, char **arguments)
 	if(strcmp(arguments[1], "init") == 0)
 	{
 		test_initialize_dynamic_allocator();
+	}
+	else if(strcmp(arguments[1], "set") == 0)
+	{
+		test_set_block_data();
 	}
 	// Test 2 Example for alloc_block_FF: tstdynalloc allocFF
 	else if(strcmp(arguments[1], "allocff") == 0)

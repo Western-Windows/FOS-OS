@@ -141,37 +141,51 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("set_block_data is not implemented yet");
 
-
-	// Checking if the "totalSize" is even or odd.
-	if (totalSize % 2 == 1) // odd "totalSize"
+	// Checking if size greater than 16.
+	if (totalSize >= 16)
 	{
-		totalSize++; 		// "totalSize" is even, LSB = 0.
+		// Checking if the "totalSize" is even or odd.
+		if ((totalSize % 2 == 1)) // odd "totalSize"
+	    {
+	        totalSize++; 		// "totalSize" is even, LSB = 0.
+	    }
+	    // else, odd no addition needed.
+
+		uint32 maskedLSBSize = totalSize;
+
+		// Adding the "isAllocated" bit (LSB) to "totalSize".
+		if (isAllocated == 1)
+	    {
+	        totalSize++;		// LSB = 1 -> Allocated.
+	    }
+	    // else, LSB = 0 -> Free.
+
+		// setting the block header and footer data.
+		va = (uint32*)va;  // original (constant) virtual address.
+		uint32* tempVa1 = va;
+
+		cprintf("=> VA: %x\n", va);
+
+		uint32* blockHeader = --tempVa1;
+		*blockHeader = totalSize;
+
+		cprintf("=> Header address: %x\n", blockHeader);
+		cprintf("=> H total block size: %u\n", *blockHeader);
+
+		uint32* tempVa2 = va;
+
+		uint32 metaDataFreeSize = maskedLSBSize - (2 * sizeof(uint32));
+
+		uint32* blockFooter = (uint32*)((char*)tempVa2 + metaDataFreeSize);
+		*blockFooter = totalSize;
+
+		cprintf("=> Footer address: %x\n", blockFooter);
+		cprintf("=> F total block size: %u\n", *blockFooter);
 	}
-	// else, even no addition needed.
-
-	uint32 maskedLSBSize = totalSize;
-
-	// Adding the "isAllocated" bit (LSB) to "totalSize".
-	if (isAllocated == 1)
+	else
 	{
-		totalSize++;		// LSB = 1 -> Allocated.
+		return;
 	}
-	// else, LSB = 0 -> Free.
-
-	// setting the block header and footer data.
-	va = (uint32*)va;  // original (constant) virtual address.
-	uint32* tempVa1 = va;
-
-	uint32* blockHeader = --tempVa1;
-	*blockHeader = totalSize;
-
-	uint32* tempVa2 = va;
-
-	uint32 metaDataFreeSize = maskedLSBSize - (2 * sizeof(int));
-	uint32 numberOfJumps = metaDataFreeSize / sizeof(int);
-
-	uint32* blockFooter = tempVa2 + numberOfJumps;
-	*blockFooter = totalSize;
 }
 
 
