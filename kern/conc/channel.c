@@ -32,6 +32,7 @@ void sleep(struct Channel *chan, struct spinlock* lk)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("sleep is not implemented yet");
 	//Your Code is Here...
+	//if (holding_spinlock(&ProcessQueues.qlock )== 1){release_spinlock(&ProcessQueues.qlock);}
 	release_spinlock(lk);
 	acquire_spinlock(&ProcessQueues.qlock);
 	struct Env *cur = get_cpu_proc();
@@ -55,20 +56,23 @@ void wakeup_one(struct Channel *chan)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("wakeup_one is not implemented yet");
 	//Your Code is Here...
+	//if (holding_spinlock(&ProcessQueues.qlock) == 1){release_spinlock(&ProcessQueues.qlock);}
 	acquire_spinlock(&ProcessQueues.qlock);
 	if(queue_size(&(chan->queue)) > 0){
 		struct Env *temp = dequeue(&chan->queue);
 			if(temp == NULL){
+				release_spinlock(&ProcessQueues.qlock);
 				return;
 			}else{
 				temp->env_status = ENV_READY;
 				sched_insert_ready0(temp);
 			}
 	}else{
+		release_spinlock(&ProcessQueues.qlock);
 		return;
 	}
-	release_spinlock(&ProcessQueues.qlock);
 
+	release_spinlock(&ProcessQueues.qlock);
 }
 
 //====================================================
@@ -85,17 +89,20 @@ void wakeup_all(struct Channel *chan)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("wakeup_all is not implemented yet");
 	//Your Code is Here...
+	//if (holding_spinlock(&ProcessQueues.qlock )== 1){release_spinlock(&ProcessQueues.qlock);}
 	acquire_spinlock(&ProcessQueues.qlock);
 	while (queue_size(&(chan->queue)) > 0){
 		if(queue_size(&(chan->queue)) > 0){
 				struct Env *temp = dequeue(&chan->queue);
 					if(temp == NULL){
+						release_spinlock(&ProcessQueues.qlock);
 						return;
 					}else{
 						temp->env_status = ENV_READY;
 						sched_insert_ready0(temp);
 					}
 			}else{
+				release_spinlock(&ProcessQueues.qlock);
 				return;
 			}
 	}

@@ -37,8 +37,13 @@ void acquire_sleeplock(struct sleeplock *lk)
 	//panic("acquire_sleeplock is not implemented yet");
 	//Your Code is Here...
 	acquire_spinlock(&guardSpinLock);
-	while(lk->locked == 1){
+	while(holding_sleeplock(lk)){
 		struct Env *curThread = get_cpu_proc();
+		if (curThread == NULL)
+		{
+			panic("no running process to block");
+		}
+		curThread->env_status = ENV_BLOCKED;
 		enqueue(&(*lk).chan.queue, curThread);
 		sleep(&(*lk).chan,&guardSpinLock);
 	}
