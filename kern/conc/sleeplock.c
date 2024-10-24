@@ -32,19 +32,17 @@ int holding_sleeplock(struct sleeplock *lk)
 struct spinlock guardSpinLock;
 void acquire_sleeplock(struct sleeplock *lk)
 {
+	char ch = 'G';
+	init_spinlock(&guardSpinLock, &ch);
 	//TODO: [PROJECT'24.MS1 - #13] [4] LOCKS - acquire_sleeplock
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("acquire_sleeplock is not implemented yet");
 	//Your Code is Here...
 	acquire_spinlock(&guardSpinLock);
-	while(holding_sleeplock(lk)){
+	while(lk->locked == 1){
 		struct Env *curThread = get_cpu_proc();
-		if (curThread == NULL)
-		{
-			panic("no running process to block");
-		}
-		curThread->env_status = ENV_BLOCKED;
-		enqueue(&(*lk).chan.queue, curThread);
+//		curThread->env_status = ENV_BLOCKED;
+//		enqueue(&(*lk).chan.queue, curThread);
 		sleep(&(*lk).chan,&guardSpinLock);
 	}
 	(lk)->locked = 1;
