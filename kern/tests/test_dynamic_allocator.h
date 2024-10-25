@@ -12,9 +12,6 @@
 #endif
 
 //2022
-/*-------------------------------------- Added tests ---------------------------------------*/
-void test_set_block_data();
-/*-------------------------------------- Added tests ---------------------------------------*/
 int  test_initialize_dynamic_allocator();
 void test_alloc_block_FF();
 void test_alloc_block_BF();
