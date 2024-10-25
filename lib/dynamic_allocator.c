@@ -273,7 +273,7 @@ void *alloc_block_FF(uint32 size)
 				nextBlock = LIST_NEXT((struct BlockElement*)it);
 			}
 		}
-		sbrk(0);
+		void* sbrkk = sbrk(0);
 		return NULL;
 	}
 	else
