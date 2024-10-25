@@ -230,12 +230,12 @@ void *alloc_block_FF(uint32 size)
 		}
 
 		struct BlockElement* headOfFreeList = LIST_FIRST(&freeBlocksList);
-		uint32* it = headOfFreeList;
+		struct BlockElement* it = headOfFreeList;
 		struct BlockElement* nextBlock = LIST_NEXT((struct BlockElement*)it);
 
 		while (nextBlock != NULL)
 		{
-			uint32* blockHeader = it - sizeof(int);
+			uint32* blockHeader = (uint32*)it - sizeof(int);
 			uint32 freeBlockSize = *blockHeader;
 
 			// In case of large block.
@@ -249,12 +249,15 @@ void *alloc_block_FF(uint32 size)
 
 					// split free block from alloc block in large free block.
 					uint32 offset = totalRequiredSize;
+					// (uint32*)((char*)it + offset)
 					uint32* vaOfNewSplitBlock = (uint32*)((char*)it + offset);
-					LIST_REMOVE(&freeBlocksList, (struct BlockElement*)it);  // Debate with haneen.
+					// Delete large free block.
+					LIST_REMOVE(&freeBlocksList, (struct BlockElement*)it);
 					uint32 sizeOfNewSplitBlock = freeBlockSize - totalRequiredSize;
 					set_block_data(vaOfNewSplitBlock, sizeOfNewSplitBlock, 0);
 
-					// call sort, and insert.
+					// call sort, and insert free splitted block.
+					list_insertion_sort((struct BlockElement*)vaOfNewSplitBlock);
 				}
 				// internal fragmentation "not large enough to split".
 				else if ((freeBlockSize - totalRequiredSize) < 16)
