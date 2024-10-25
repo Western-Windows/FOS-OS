@@ -165,13 +165,13 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 		va = (uint32*)va;  // original (constant) virtual address.
 		uint32* tempVa1 = va;
 
-		cprintf("=> VA: %x\n", va);
+//		cprintf("=> VA: %x\n", va);
 
 		uint32* blockHeader = --tempVa1;
 		*blockHeader = totalSize;
-
-		cprintf("=> Header address: %x\n", blockHeader);
-		cprintf("=> H total block size: %u\n", *blockHeader);
+//
+//		cprintf("=> Header address: %x\n", blockHeader);
+//		cprintf("=> H total block size: %u\n", *blockHeader);
 
 		uint32* tempVa2 = va;
 
@@ -179,9 +179,9 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 
 		uint32* blockFooter = (uint32*)((char*)tempVa2 + metaDataFreeSize);
 		*blockFooter = totalSize;
-
-		cprintf("=> Footer address: %x\n", blockFooter);
-		cprintf("=> F total block size: %u\n", *blockFooter);
+//
+//		cprintf("=> Footer address: %x\n", blockFooter);
+//		cprintf("=> F total block size: %u\n", *blockFooter);
 	}
 	else
 	{
@@ -216,13 +216,15 @@ void *alloc_block_FF(uint32 size)
 	//TODO: [PROJECT'24.MS1 - #06] [3] DYNAMIC ALLOCATOR - alloc_block_FF
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("alloc_block_FF is not implemented yet");
-
+//	int sz = LIST_SIZE(&freeBlocksList);
+//	cprintf("%u\n",sz);
 	// Add header and footer size to the required "size".
 	uint32 totalRequiredSize = (2 * sizeof(int) + size);
 
 	// Check if the "totalRequiredSize" is greater than 16.
 	if (totalRequiredSize >= 16)
 	{
+
 		// Checking if the "totalSize" is even or odd.
 		if ((totalRequiredSize % 2 == 1)) // odd "totalSize"
 		{
@@ -233,11 +235,12 @@ void *alloc_block_FF(uint32 size)
 		struct BlockElement* it = headOfFreeList;
 		struct BlockElement* nextBlock = LIST_NEXT((struct BlockElement*)it);
 
-		while (nextBlock != NULL)
+		while (it)
 		{
-			uint32* blockHeader = (uint32*)it - sizeof(int);
-			uint32 freeBlockSize = *blockHeader;
 
+			//uint32* blockHeader = (uint32*)it - sizeof(int);
+			uint32 freeBlockSize = get_block_size(it);
+			//cprintf("%u\n",freeBlockSize);
 			// In case of large block.
 			if (freeBlockSize >= totalRequiredSize)
 			{
@@ -262,6 +265,7 @@ void *alloc_block_FF(uint32 size)
 				// internal fragmentation "not large enough to split".
 				else if ((freeBlockSize - totalRequiredSize) < 16)
 				{
+					cprintf("%u\n",(freeBlockSize-totalRequiredSize));
 					set_block_data(it, freeBlockSize, 1);
 				}
 				return it;
@@ -269,8 +273,10 @@ void *alloc_block_FF(uint32 size)
 			// No space found.
 			if (freeBlockSize < totalRequiredSize)
 			{
+
+				cprintf("hello pookie i will haunt u  \n");
 				it = LIST_NEXT((struct BlockElement*)it);
-				nextBlock = LIST_NEXT((struct BlockElement*)it);
+//				nextBlock = LIST_NEXT((struct BlockElement*)it);
 			}
 		}
 		void* sbrkk = sbrk(0);
@@ -323,15 +329,14 @@ void free_block(void *va)
 	bool next_empty, prev_empty;
 
 	// Check if consecutive blocks are empty
-	if (is_free_block((uint32*) prev_va))
-	{
-		prev_empty = 1;
-	}
-	if (is_free_block((uint32*) next_va))
-	{
-		next_empty = 1;
-	}
-
+	if (LIST_PREV(free_block) != 0 && is_free_block((uint32*) prev_va))
+	    {
+	        prev_empty = 1;
+	    }
+	if (LIST_NEXT(free_block) !=0 && is_free_block((uint32*) next_va))
+	    {
+	        next_empty = 1;
+	    }
 	uint32* new_va;
 	uint32 new_size;
 	struct BlockElement* prev =  LIST_PREV(free_block);

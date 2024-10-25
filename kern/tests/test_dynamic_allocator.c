@@ -179,6 +179,7 @@ int test_initial_alloc(int ALLOC_STRATEGY)
 	if(va == NULL || (va != (curVA + sizeOfMetaData/2)) || LIST_SIZE(&freeBlocksList) != 0)
 	{
 		is_correct = 0;
+		cprintf("%p",va);
 		cprintf("alloc_block_xx #4: WRONG ALLOC.\n");
 	}
 	*(startVAs[idx]) = idx ;
