@@ -220,7 +220,7 @@ void *alloc_block_FF(uint32 size)
 //	cprintf("%u\n",sz);
 	// Add header and footer size to the required "size".
 	uint32 totalRequiredSize = (2 * sizeof(int) + size);
-
+//	cprintf("%u\n",LIST_SIZE(&freeBlocksList));
 	// Check if the "totalRequiredSize" is greater than 16.
 	if (totalRequiredSize >= 16)
 	{
@@ -265,8 +265,9 @@ void *alloc_block_FF(uint32 size)
 				// internal fragmentation "not large enough to split".
 				else if ((freeBlockSize - totalRequiredSize) < 16)
 				{
-					cprintf("%u\n",(freeBlockSize-totalRequiredSize));
+//					cprintf("%u\n",(freeBlockSize-totalRequiredSize));
 					set_block_data(it, freeBlockSize, 1);
+					LIST_REMOVE(&freeBlocksList, (struct BlockElement*)it);
 				}
 				return it;
 			}
@@ -313,51 +314,61 @@ void free_block(void *va)
 	{
 		return;
 	}
-	if(va == 0) // If block is NULL
+	if(va == NULL) // If block is NULL
 	{
 		return;
 	}
 
 	// Insert block into list (sorted)
 	struct BlockElement* free_block = (struct BlockElement*) va;
+
 	list_insertion_sort(free_block);
+	cprintf("wakka wakkaaa wa2 wa2%u\n",LIST_SIZE(&freeBlocksList));
 
-	// Get address of next and previous blocks
-	uint32 block_size = get_block_size(va);
-	uint32 next_va = (uint32)va + block_size;
-	uint32 prev_va = (uint32)va - block_size;
-	bool next_empty, prev_empty;
+    // Get address of next and previous blocks
+    uint32 block_size = get_block_size(va);
+    uint32 next_va = (uint32)va + block_size;
+    uint32 prev_footer = (uint32)va - 2*sizeof(int);
 
+    uint8 is_prev_empty = (~(*((uint32*)prev_footer)) & 0x1);
+	bool next_empty=0, prev_empty=0;
 	// Check if consecutive blocks are empty
-	if (LIST_PREV(free_block) != 0 && is_free_block((uint32*) prev_va))
+	if (LIST_PREV(free_block) != NULL && is_prev_empty)
 	    {
 	        prev_empty = 1;
 	    }
-	if (LIST_NEXT(free_block) !=0 && is_free_block((uint32*) next_va))
+	if (LIST_NEXT(free_block) !=NULL && is_free_block((uint32*)next_va))
 	    {
 	        next_empty = 1;
 	    }
+	cprintf("%u\n",next_empty);
+	cprintf("%u\n",prev_empty);
 	uint32* new_va;
 	uint32 new_size;
 	struct BlockElement* prev =  LIST_PREV(free_block);
 	struct BlockElement* next =  LIST_NEXT(free_block);
-
+//		cprintf("prev1%x\n",prev);
+//		cprintf("prev2%x\n",prev);
 	// Case: Merge with left and right blocks
 	if (prev_empty && next_empty)
 	{
-		new_va = (uint32*) prev_va; // Set va of merged block to left block
+
+
+		new_va = (uint32*)prev; // Set va of merged block to left block
 		new_size = block_size + get_block_size(prev) + get_block_size(next);
 
 		// Remove extra va's since they will be merged into one block
 		LIST_REMOVE(&freeBlocksList, next);
 		LIST_REMOVE(&freeBlocksList, free_block);
+		cprintf("fuck you no1 %x\n ",new_va);
 	}
 
 	// Case: Merge with left block
 	else if(prev_empty)
 	{
-		new_va = (uint32*) prev_va; // Set va of merged block to left block
+		new_va = (uint32*)prev; // Set va of merged block to left block
 		new_size = block_size + get_block_size(prev);
+		cprintf("fuck you no2 %x\n ",new_va);
 
 		// Remove extra va since they will be merged into one block
 		LIST_REMOVE(&freeBlocksList, free_block);
@@ -370,6 +381,7 @@ void free_block(void *va)
 		new_size = block_size + get_block_size(next);
 		// Remove extra va since they will be merged into one block
 		LIST_REMOVE(&freeBlocksList, next);
+		cprintf("fuck you no3 %x\n ",new_va);
 	}
 
 	// Case: No merging
@@ -420,13 +432,14 @@ void *alloc_block_NF(uint32 size)
 
 void list_insertion_sort(struct BlockElement* free_block)
 {
-	if (free_block == 0) // If it's NULL
+	bool gg = 0;
+	if (free_block == NULL) // If it's NULL
 	{
 		return;
 	}
 	if(LIST_EMPTY(&freeBlocksList)) // Empty list
 	{
-		//cprintf("%x at head\n", free_block);
+//		cprintf("%x at head\n", free_block);
 		LIST_INSERT_HEAD(&freeBlocksList, free_block);
 		return;
 	}
@@ -440,8 +453,10 @@ void list_insertion_sort(struct BlockElement* free_block)
 
 			if (free_block < current_block) // If block is smaller than head, block becomes head
 			{
-				//cprintf("%x at head\n", free_block);
-				LIST_INSERT_HEAD(&freeBlocksList, free_block);
+//				cprintf("we want our parks in peace %u\n",LIST_SIZE(&freeBlocksList));
+//				cprintf("%x at head\n", free_block);
+				LIST_INSERT_BEFORE(&freeBlocksList, current_block, free_block);
+				gg=1;
 				break;
 			}
 			continue; // Else skip the head (to avoid NULL pointers in the checks)
@@ -451,14 +466,16 @@ void list_insertion_sort(struct BlockElement* free_block)
 		{
 			if (free_block > current_block)
 			{
-				//cprintf("%x at tail\n", free_block);
-				LIST_INSERT_TAIL(&freeBlocksList, free_block);
+				cprintf("%x at tail\n", free_block);
+				LIST_INSERT_AFTER(&freeBlocksList, current_block, free_block);
+				gg=1;
 				break;
 			}
 			continue; // Else skip the tail (to avoid NULL pointers in the checks)
 		}
 		else if (free_block == current_block) // If block already exists
 		{
+			gg=1;
 			break;
 		}
 		else
@@ -466,18 +483,23 @@ void list_insertion_sort(struct BlockElement* free_block)
 			// If block should be before current block
 			if (free_block < current_block && free_block > LIST_PREV(current_block))
 			{
-				//cprintf("%x before %x \n", free_block, current_block);
+				cprintf("%x before %x \n", free_block, current_block);
 				LIST_INSERT_BEFORE(&freeBlocksList, current_block, free_block);
+				gg=1;
 				break;
 			}
 			// If block should be after current block
 			else if(free_block > current_block && free_block < LIST_NEXT(current_block))
 			{
-				//cprintf("%x after %x \n", free_block, current_block);
+				cprintf("%x after %x \n", free_block, current_block);
 				LIST_INSERT_AFTER(&freeBlocksList, current_block, free_block);
+				gg=1;
 				break;
 			}
 		}
+	}
+	if(!gg){
+		LIST_INSERT_TAIL(&freeBlocksList,free_block);
 	}
 
 	return;

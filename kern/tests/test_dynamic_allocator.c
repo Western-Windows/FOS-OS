@@ -166,6 +166,7 @@ int test_initial_alloc(int ALLOC_STRATEGY)
 	{
 		eval += 20;
 	}
+//	print_blocks_list(freeBlocksList);
 	//====================================================================//
 	/*INITIAL ALLOC Scenario 3: Try to allocate a block with a size equal to the size of the first existing free block*/
 	cprintf("	3: Try to allocate a block with equal to the first existing free block\n\n") ;
@@ -179,7 +180,6 @@ int test_initial_alloc(int ALLOC_STRATEGY)
 	if(va == NULL || (va != (curVA + sizeOfMetaData/2)) || LIST_SIZE(&freeBlocksList) != 0)
 	{
 		is_correct = 0;
-		cprintf("%p",va);
 		cprintf("alloc_block_xx #4: WRONG ALLOC.\n");
 	}
 	*(startVAs[idx]) = idx ;
@@ -234,7 +234,10 @@ void test_alloc_block_FF()
 	//Free set of blocks with different sizes (first block of each size)
 	for (int i = 0; i < numOfAllocs; ++i)
 	{
+		cprintf("%x\n",startVAs[i*allocCntPerSize]);
+		cprintf("%d\n",i);
 		free_block(startVAs[i*allocCntPerSize]);
+
 	}
 	is_correct = 1;
 	//Check number of freed blocks
@@ -242,6 +245,7 @@ void test_alloc_block_FF()
 	{
 		is_correct = 0;
 		cprintf("alloc_block_FF #5: WRONG FREE. unexpected number of freed blocks\n");
+		cprintf("%u\n",LIST_SIZE(&freeBlocksList));
 	}
 	if (is_correct)
 	{
@@ -251,7 +255,6 @@ void test_alloc_block_FF()
 	/*FF ALLOC Scenario 1: Try to allocate a block with a size greater than the size of any existing free block*/
 	cprintf("	1: Try to allocate large block [not fit in any space]\n\n") ;
 	is_correct = 1;
-
 	uint32 maxSize = 0 ;
 	for (int i = 0; i < numOfAllocs; ++i)
 	{
