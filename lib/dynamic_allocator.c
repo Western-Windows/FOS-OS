@@ -174,7 +174,7 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 
 		uint32* tempVa2 = va;
 
-		uint32 metaDataFreeSize = maskedLSBSize - (2 * sizeof(uint32));
+		uint32 metaDataFreeSize = maskedLSBSize - (2 * sizeof(int));
 
 		uint32* blockFooter = (uint32*)((char*)tempVa2 + metaDataFreeSize);
 		*blockFooter = totalSize;
@@ -214,9 +214,68 @@ void *alloc_block_FF(uint32 size)
 
 	//TODO: [PROJECT'24.MS1 - #06] [3] DYNAMIC ALLOCATOR - alloc_block_FF
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("alloc_block_FF is not implemented yet");
-	//Your Code is Here...
+	//panic("alloc_block_FF is not implemented yet");
 
+	// Add header and footer size to the required "size".
+	uint32 totalRequiredSize = (2 * sizeof(int) + size);
+
+	// Check if the "totalRequiredSize" is greater than 16.
+	if (totalRequiredSize >= 16)
+	{
+		// Checking if the "totalSize" is even or odd.
+		if ((totalRequiredSize % 2 == 1)) // odd "totalSize"
+		{
+			totalRequiredSize++; 		// "totalSize" is even, LSB = 0.
+		}
+
+		struct BlockElement* headOfFreeList = LIST_FIRST(&freeBlocksList);
+		uint32* it = headOfFreeList;
+		struct BlockElement* nextBlock = LIST_NEXT((struct BlockElement*)it);
+
+		while (nextBlock != NULL)
+		{
+			uint32* blockHeader = it - sizeof(int);
+			uint32 freeBlockSize = *blockHeader;
+
+			// In case of large block.
+			if (freeBlockSize >= totalRequiredSize)
+			{
+				// External fragmentation "too large".
+				if ((freeBlockSize - totalRequiredSize) >= 16)
+				{
+					// Alloc block in large free block.
+					set_block_data(it, totalRequiredSize, 1);
+
+					// split free block from alloc block in large free block.
+					uint32 offset = totalRequiredSize;
+					uint32* vaOfNewSplitBlock = (uint32*)((char*)it + offset);
+					LIST_REMOVE(&freeBlocksList, (struct BlockElement*)it);  // Debate with haneen.
+					uint32 sizeOfNewSplitBlock = freeBlockSize - totalRequiredSize;
+					set_block_data(vaOfNewSplitBlock, sizeOfNewSplitBlock, 0);
+
+					// call sort, and insert.
+				}
+				// internal fragmentation "not large enough to split".
+				else if ((freeBlockSize - totalRequiredSize) < 16)
+				{
+					set_block_data(it, freeBlockSize, 1);
+				}
+				return it;
+			}
+			// No space found.
+			if (freeBlockSize < totalRequiredSize)
+			{
+				it = LIST_NEXT((struct BlockElement*)it);
+				nextBlock = LIST_NEXT((struct BlockElement*)it);
+			}
+		}
+		sbrk();
+		return NULL;
+	}
+	else
+	{
+		return NULL;
+	}
 }
 //=========================================
 // [4] ALLOCATE BLOCK BY BEST FIT:

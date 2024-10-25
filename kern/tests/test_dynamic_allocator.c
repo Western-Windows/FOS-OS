@@ -20,7 +20,7 @@
 /*-------------------------------------- Team tests ---------------------------------------*/
 void test_set_block_data()
 {
-	uint32 totalSize = 15;
+	uint32 totalSize = 17;
 	bool isAllocated = 1;
 
     uint32* va = (uint32*)KERNEL_HEAP_START;
