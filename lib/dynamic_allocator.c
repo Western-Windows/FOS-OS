@@ -313,6 +313,7 @@ void list_insertion_sort(struct BlockElement* free_block)
 	}
 	if(LIST_EMPTY(&freeBlocksList)) // Empty list
 	{
+		//cprintf("%x at head\n", free_block);
 		LIST_INSERT_HEAD(&freeBlocksList, free_block);
 		return;
 	}
@@ -326,7 +327,7 @@ void list_insertion_sort(struct BlockElement* free_block)
 
 			if (free_block < current_block) // If block is smaller than head, block becomes head
 			{
-				cprintf("%x at head\n", free_block);
+				//cprintf("%x at head\n", free_block);
 				LIST_INSERT_HEAD(&freeBlocksList, free_block);
 				break;
 			}
@@ -337,7 +338,7 @@ void list_insertion_sort(struct BlockElement* free_block)
 		{
 			if (free_block > current_block)
 			{
-				cprintf("%x at tail\n", free_block);
+				//cprintf("%x at tail\n", free_block);
 				LIST_INSERT_TAIL(&freeBlocksList, free_block);
 				break;
 			}
@@ -352,14 +353,14 @@ void list_insertion_sort(struct BlockElement* free_block)
 			// If block should be before current block
 			if (free_block < current_block && free_block > LIST_PREV(current_block))
 			{
-				cprintf("%x before %x \n", free_block, current_block);
+				//cprintf("%x before %x \n", free_block, current_block);
 				LIST_INSERT_BEFORE(&freeBlocksList, current_block, free_block);
 				break;
 			}
 			// If block should be after current block
 			else if(free_block > current_block && free_block < LIST_NEXT(current_block))
 			{
-				cprintf("%x after %x \n", free_block, current_block);
+				//cprintf("%x after %x \n", free_block, current_block);
 				LIST_INSERT_AFTER(&freeBlocksList, current_block, free_block);
 				break;
 			}
