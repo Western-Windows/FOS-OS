@@ -17,6 +17,22 @@
 #define Mega  (1024*1024)
 #define kilo (1024)
 
+/*-------------------------------------- Team tests ---------------------------------------*/
+void test_set_block_data()
+{
+	uint32 totalSize = 17;
+	bool isAllocated = 1;
+
+    uint32* va = (uint32*)KERNEL_HEAP_START;
+    va++;
+    set_block_data(va , (uint32)totalSize , (bool)isAllocated);
+    uint32 size = get_block_size(va);
+    uint8 alloc = is_free_block(va);
+
+    cprintf("=> Block size: %u\n", size);
+    cprintf("=> isFree: %u\n", alloc);
+}
+/*-------------------------------------- Team tests ---------------------------------------*/
 void test_initialize_dynamic_allocator()
 {
 #if USE_KHEAP
