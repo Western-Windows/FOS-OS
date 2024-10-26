@@ -427,7 +427,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 //	if(new_size==oldSize){
 //		return va;
 //	}
-	if(neededSize>=0){
+	if(neededSize>0){
 		if(isNextBlockFree && nextBlockSize >= neededSize){
 
 

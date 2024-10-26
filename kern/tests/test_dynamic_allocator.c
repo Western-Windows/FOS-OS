@@ -1226,6 +1226,7 @@ void test_realloc_block_FF()
 	cprintf("===================================================\n");
 
 	int eval = 0;
+	int unseeneval = 0;
 	bool is_correct;
 
 	int initAllocatedSpace = 3*Mega;
@@ -1467,6 +1468,7 @@ void test_realloc_block_FF()
 	{
 		eval += 15;
 	}
+	//[4.2] next block is full (NO coalesce) [Internal Fragmentation]
 	cprintf("	4.2: next block is full (NO coalesce) [Internal Fragmentation]\n\n") ;
 
 	is_correct = 1;
@@ -1502,6 +1504,67 @@ void test_realloc_block_FF()
 
 	cprintf("[PARTIAL] test realloc_block with FIRST FIT completed. Evaluation = %d%\n", eval);
 
+	//====================================================================//
+	//THIS IS THE START OF ADDED TESTS//
+	//====================================================================//
+	cprintf("THIS IS THE START OF ADDED TESTS\n");
+
+	//[1] realloc with same size (NOTHING CHANGES)
+	cprintf("realloc with same size (NOTHING CHANGES)\n");
+	is_correct = 1;
+	{
+		blockIndex = 1*allocCntPerSize + 1;
+		old_size = allocSizes[1] - sizeOfMetaData;/*20 B*/
+		new_size = old_size;
+		expectedSize = allocSizes[1]; /*Same block size [Internal Framgmentation]*/
+		expectedVA = startVAs[blockIndex];
+
+		va = realloc_block_FF(startVAs[blockIndex], new_size);
+
+		if (check_block(va, expectedVA, expectedSize, 1) == 0)
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #4.2.1: Failed\n");
+		}
+		//check content of reallocated block
+		if (*(startVAs[blockIndex]) != blockIndex || *(midVAs[blockIndex]) != blockIndex)
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #4.2.2: WRONG REALLOC! content of the block is not correct. Expected %d\n", blockIndex);
+		}
+
+		//Check # free blocks
+		if (is_correct) is_correct = check_list_size(expectedNumOfFreeBlks);
+
+	}
+	if (is_correct)
+	{
+		unseeneval += 40;
+	}
+
+	//[2] decrease size, next block free (Coalesce)
+	is_correct = 1;
+	{
+
+	}
+	if (is_correct) {
+		unseeneval += 30;
+	}
+
+
+	//[3] increase size, next block full (relocate)
+	is_correct = 1;
+	{
+
+	}
+	if (is_correct) {
+		unseeneval += 30;
+	}
+
+
+
+
+	cprintf("[UNSEEN] test realloc_block with FIRST FIT completed. Evaluation = %d%\n", unseeneval);
 }
 
 
