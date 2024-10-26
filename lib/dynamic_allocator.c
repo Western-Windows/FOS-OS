@@ -403,8 +403,52 @@ void *realloc_block_FF(void* va, uint32 new_size)
 {
 	//TODO: [PROJECT'24.MS1 - #08] [3] DYNAMIC ALLOCATOR - realloc_block_FF
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("realloc_block_FF is not implemented yet");
+	//	panic("realloc_block_FF is not implemented yet");
 	//Your Code is Here...
+	if(va==NULL && new_size){
+		return alloc_block_FF(new_size);
+	}
+	if(va==NULL && !(new_size)){
+		return NULL;
+	}
+	if(!(new_size)){
+		free_block(va);
+		return NULL;
+	}
+	bool isFree = !is_free_block((uint32*)va);
+	uint32 oldSize = get_block_size(va);
+	uint32 neededSize = new_size - oldSize;
+	uint32 nextHeader = (uint32)va + oldSize - 4;
+	void* nextVa = (uint32*)((char*)va + oldSize);
+	uint32 nextBlockSize = (nextHeader) & ~(0x1);
+	bool isNextBlockFree = (~(nextHeader) & 0x1);
+	if(new_size==oldSize){
+		return va;
+	}
+	if(neededSize>=0){
+		if(isNextBlockFree && nextBlockSize >= neededSize){
+			cprintf("hello i am here");
+				set_block_data(va,new_size,1);
+				uint32 newFreeSize = (nextBlockSize - neededSize>=16)? nextBlockSize - neededSize:16;
+				void* newVa = (uint32*)((char*)va + new_size);
+				LIST_REMOVE(&freeBlocksList, (struct BlockElement*)nextVa);
+				set_block_data(newVa,newFreeSize,0);cprintf("%x",va);
+				list_insertion_sort((struct BlockElement*)newVa);
+
+				return va;
+		}else{
+			free_block(va);
+			return alloc_block_FF(new_size);
+		}
+	}else if(neededSize<0){
+		neededSize*=-1;
+		set_block_data(va,(16>=new_size)?16:new_size,1);
+		uint32* newFreeVa = (uint32*)((char*)va + ((16>=new_size)?16:new_size));
+		set_block_data(newFreeVa,(16>=neededSize)?16:neededSize,0);
+		list_insertion_sort((struct BlockElement*)newFreeVa);
+		return va;
+	}
+
 }
 
 /*********************************************************************************************/
