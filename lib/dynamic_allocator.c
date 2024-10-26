@@ -145,6 +145,7 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 	// Checking if size greater than 16.
 	if (totalSize >= 16)
 	{
+//		cprintf("h");
 		// Checking if the "totalSize" is even or odd.
 		if ((totalSize % 2 == 1)) // odd "totalSize"
 	    {
@@ -153,33 +154,36 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 	    // else, odd no addition needed.
 
 		uint32 maskedLSBSize = totalSize;
-
+//		cprintf("e");
 		// Adding the "isAllocated" bit (LSB) to "totalSize".
 		if (isAllocated == 1)
 	    {
 	        totalSize++;		// LSB = 1 -> Allocated.
 	    }
 	    // else, LSB = 0 -> Free.
-
+//		cprintf("r");
 		// setting the block header and footer data.
 		va = (uint32*)va;  // original (constant) virtual address.
 		uint32* tempVa1 = va;
-
+//		cprintf("e");
 //		cprintf("=> VA: %x\n", va);
 
 		uint32* blockHeader = --tempVa1;
 		*blockHeader = totalSize;
 //
+//		cprintf("i");
 //		cprintf("=> Header address: %x\n", blockHeader);
 //		cprintf("=> H total block size: %u\n", *blockHeader);
 
 		uint32* tempVa2 = va;
-
+//		cprintf("a");
 		uint32 metaDataFreeSize = maskedLSBSize - (2 * sizeof(uint32));
-
+//		cprintf("m");
 		uint32* blockFooter = (uint32*)((char*)tempVa2 + metaDataFreeSize);
+//		cprintf("hehe");
 		*blockFooter = totalSize;
 //
+
 //		cprintf("=> Footer address: %x\n", blockFooter);
 //		cprintf("=> F total block size: %u\n", *blockFooter);
 	}
@@ -415,19 +419,21 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		free_block(va);
 		return NULL;
 	}
+	new_size+=8;
 	bool isFree = !is_free_block((uint32*)va);
 	uint32 oldSize = get_block_size(va);
-	uint32 neededSize = new_size - oldSize;
-	uint32 nextHeader = (uint32)va + oldSize - 4;
+	int neededSize = new_size - oldSize;
+	cprintf("%d\n",neededSize);
+	uint32* nextHeader = (uint32*)((char*)va + oldSize - sizeof(uint32));
 	void* nextVa = (uint32*)((char*)va + oldSize);
-	uint32 nextBlockSize = (nextHeader) & ~(0x1);
-	bool isNextBlockFree = (~(nextHeader) & 0x1);
+	uint32 nextBlockSize = (*nextHeader) & ~(0x1);
+	bool isNextBlockFree = (~(*nextHeader) & 0x1);
 	if(new_size==oldSize){
 		return va;
 	}
 	if(neededSize>=0){
 		if(isNextBlockFree && nextBlockSize >= neededSize){
-			cprintf("hello i am here");
+
 
 				uint32 newFreeSize;
 				if((nextBlockSize - neededSize)>=16){
@@ -435,11 +441,12 @@ void *realloc_block_FF(void* va, uint32 new_size)
 					newFreeSize = (nextBlockSize - neededSize);
 					void* newVa = (uint32*)((char*)va + new_size);
 					cprintf("%u\n",newFreeSize);
-					list_insertion_sort((struct BlockElement*)newVa);
+
 					LIST_REMOVE(&freeBlocksList, (struct BlockElement*)nextVa);
-					cprintf("%x",va);
 					set_block_data(newVa,newFreeSize,0);
 
+
+					list_insertion_sort((struct BlockElement*)newVa);
 				}
 				else
 				{
@@ -449,16 +456,31 @@ void *realloc_block_FF(void* va, uint32 new_size)
 
 
 				return va;
-		}else{
+		}
+		else{
 			free_block(va);
 			return alloc_block_FF(new_size);
 		}
-	}else if(neededSize<0){
+	}else{
+//		cprintf("hello i am herexxxxxxxxxxxxxxxxx");
 		neededSize*=-1;
-		set_block_data(va,(16>=new_size)?16:new_size,1);
-		uint32* newFreeVa = (uint32*)((char*)va + ((16>=new_size)?16:new_size));
-		set_block_data(newFreeVa,(16>=neededSize)?16:neededSize,0);
-		list_insertion_sort((struct BlockElement*)newFreeVa);
+		if(neededSize>=16){
+
+			set_block_data(va,new_size,1);
+			uint32* newFreeVa = (uint32*)((char*)va + new_size);
+			set_block_data(newFreeVa,neededSize,0);
+			if(isNextBlockFree){
+				free_block(newFreeVa);
+			}
+			else{
+				list_insertion_sort((struct BlockElement*)newFreeVa);
+			}
+
+		}else{
+			set_block_data(va,oldSize,1);
+			uint32* newFreeVa = (uint32*)((char*)va + oldSize);
+		}
+
 		return va;
 	}
 

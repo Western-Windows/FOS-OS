@@ -1368,7 +1368,7 @@ void test_realloc_block_FF()
 		expectedVA = startVAs[blockIndex];
 
 		va = realloc_block_FF(startVAs[blockIndex], new_size);
-
+		cprintf("va %x and result %x",startVAs[blockIndex],va);
 		//check return address
 		if (check_block(va, expectedVA, expectedSize, 1) == 0)
 		{
