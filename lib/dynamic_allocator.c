@@ -428,12 +428,25 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	if(neededSize>=0){
 		if(isNextBlockFree && nextBlockSize >= neededSize){
 			cprintf("hello i am here");
-				set_block_data(va,new_size,1);
-				uint32 newFreeSize = (nextBlockSize - neededSize>=16)? nextBlockSize - neededSize:16;
-				void* newVa = (uint32*)((char*)va + new_size);
-				LIST_REMOVE(&freeBlocksList, (struct BlockElement*)nextVa);
-				set_block_data(newVa,newFreeSize,0);cprintf("%x",va);
-				list_insertion_sort((struct BlockElement*)newVa);
+
+				uint32 newFreeSize;
+				if((nextBlockSize - neededSize)>=16){
+					set_block_data(va,new_size,1);
+					newFreeSize = (nextBlockSize - neededSize);
+					void* newVa = (uint32*)((char*)va + new_size);
+					cprintf("%u\n",newFreeSize);
+					list_insertion_sort((struct BlockElement*)newVa);
+					LIST_REMOVE(&freeBlocksList, (struct BlockElement*)nextVa);
+					cprintf("%x",va);
+					set_block_data(newVa,newFreeSize,0);
+
+				}
+				else
+				{
+					set_block_data(va,nextBlockSize+oldSize,1);
+					LIST_REMOVE(&freeBlocksList, (struct BlockElement*)nextVa);
+				}
+
 
 				return va;
 		}else{
