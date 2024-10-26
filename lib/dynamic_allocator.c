@@ -327,7 +327,7 @@ void free_block(void *va)
 	struct BlockElement* free_block = (struct BlockElement*) va;
 
 	list_insertion_sort(free_block);
-	cprintf("wakka wakkaaa wa2 wa2%u\n",LIST_SIZE(&freeBlocksList));
+//	cprintf("wakka wakkaaa wa2 wa2%u\n",LIST_SIZE(&freeBlocksList));
 
     // Get address of next and previous blocks
     uint32 block_size = get_block_size(va);
@@ -345,8 +345,8 @@ void free_block(void *va)
 	    {
 	        next_empty = 1;
 	    }
-	cprintf("%u\n",next_empty);
-	cprintf("%u\n",prev_empty);
+//	cprintf("%u\n",next_empty);
+//	cprintf("%u\n",prev_empty);
 	uint32* new_va;
 	uint32 new_size;
 	struct BlockElement* prev =  LIST_PREV(free_block);
@@ -364,7 +364,6 @@ void free_block(void *va)
 		// Remove extra va's since they will be merged into one block
 		LIST_REMOVE(&freeBlocksList, next);
 		LIST_REMOVE(&freeBlocksList, free_block);
-		cprintf("fuck you no1 %x\n ",new_va);
 	}
 
 	// Case: Merge with left block
@@ -372,7 +371,6 @@ void free_block(void *va)
 	{
 		new_va = (uint32*)prev; // Set va of merged block to left block
 		new_size = block_size + get_block_size(prev);
-		cprintf("fuck you no2 %x\n ",new_va);
 
 		// Remove extra va since they will be merged into one block
 		LIST_REMOVE(&freeBlocksList, free_block);
@@ -385,7 +383,6 @@ void free_block(void *va)
 		new_size = block_size + get_block_size(next);
 		// Remove extra va since they will be merged into one block
 		LIST_REMOVE(&freeBlocksList, next);
-		cprintf("fuck you no3 %x\n ",new_va);
 	}
 
 	// Case: No merging
@@ -412,25 +409,24 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	if(va==NULL && new_size){
 		return alloc_block_FF(new_size);
 	}
-	if(va==NULL && !(new_size)){
+	if(va==NULL && (new_size==0)){
 		return NULL;
 	}
-	if(!(new_size)){
+	if((new_size==0)){
 		free_block(va);
 		return NULL;
 	}
-	new_size+=8;
-	bool isFree = !is_free_block((uint32*)va);
+	new_size+=(2*sizeof(uint32));
 	uint32 oldSize = get_block_size(va);
 	int neededSize = new_size - oldSize;
-	cprintf("%d\n",neededSize);
+//	cprintf("%d\n",neededSize);
 	uint32* nextHeader = (uint32*)((char*)va + oldSize - sizeof(uint32));
 	void* nextVa = (uint32*)((char*)va + oldSize);
 	uint32 nextBlockSize = (*nextHeader) & ~(0x1);
 	bool isNextBlockFree = (~(*nextHeader) & 0x1);
-	if(new_size==oldSize){
-		return va;
-	}
+//	if(new_size==oldSize){
+//		return va;
+//	}
 	if(neededSize>=0){
 		if(isNextBlockFree && nextBlockSize >= neededSize){
 
@@ -440,7 +436,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 					set_block_data(va,new_size,1);
 					newFreeSize = (nextBlockSize - neededSize);
 					void* newVa = (uint32*)((char*)va + new_size);
-					cprintf("%u\n",newFreeSize);
+//					cprintf("%u\n",newFreeSize);
 
 					LIST_REMOVE(&freeBlocksList, (struct BlockElement*)nextVa);
 					set_block_data(newVa,newFreeSize,0);
@@ -464,24 +460,16 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	}else{
 //		cprintf("hello i am herexxxxxxxxxxxxxxxxx");
 		neededSize*=-1;
-		if(neededSize>=16){
 
+		if(neededSize>=16){
 			set_block_data(va,new_size,1);
 			uint32* newFreeVa = (uint32*)((char*)va + new_size);
-			set_block_data(newFreeVa,neededSize,0);
-			if(isNextBlockFree){
-				free_block(newFreeVa);
-			}
-			else{
-				list_insertion_sort((struct BlockElement*)newFreeVa);
-			}
+			set_block_data(newFreeVa,neededSize,1);
+			free_block(newFreeVa);
 
-		}else{
-			set_block_data(va,oldSize,1);
-			uint32* newFreeVa = (uint32*)((char*)va + oldSize);
 		}
-
 		return va;
+
 	}
 
 }
