@@ -429,8 +429,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 //	}
 	if(neededSize>0){
 		if(isNextBlockFree && nextBlockSize >= neededSize){
-
-
 				uint32 newFreeSize;
 				if((nextBlockSize - neededSize)>=16){
 					set_block_data(va,new_size,1);
@@ -454,11 +452,12 @@ void *realloc_block_FF(void* va, uint32 new_size)
 				return va;
 		}
 		else{
+			void* tmpVa = alloc_block_FF(new_size);
+			memcpy(tmpVa,va,oldSize);
 			free_block(va);
-			return alloc_block_FF(new_size);
+			return tmpVa;
 		}
 	}else{
-//		cprintf("hello i am herexxxxxxxxxxxxxxxxx");
 		neededSize*=-1;
 
 		if(neededSize>=16){
