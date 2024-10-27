@@ -518,17 +518,18 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	new_size+=(2*sizeof(uint32));
 	uint32 oldSize = get_block_size(va);
 	int neededSize = new_size - oldSize;
-	cprintf("%d\n",neededSize);
+	cprintf("%d\n",oldSize);
 	bool isFree = is_free_block(va);
 	uint32* nextHeader = (uint32*)((char*)va + oldSize - sizeof(uint32));
 	void* nextVa = (uint32*)((char*)va + oldSize);
 	uint32 nextBlockSize = (*nextHeader) & ~(0x1);
 	bool isNextBlockFree = (~(*nextHeader) & 0x1);
-	cprintf("thisisnextblock %d",isNextBlockFree);
+
 	if(new_size==oldSize){
 		return va;
 	}
 	if(isFree==1){
+		cprintf("thisisnextblock %d",isNextBlockFree);
 		if(oldSize>=new_size){
 			neededSize*=-1;
 			if(neededSize>=16){
@@ -563,9 +564,11 @@ void *realloc_block_FF(void* va, uint32 new_size)
 
 		}
 		void* tmpVa = alloc_block_FF(new_size-(2*sizeof(int)));
-		if(tmpVa!=NULL){
-			memcpy(tmpVa,va,oldSize);
+
+		if(tmpVa==NULL){
+			return NULL;
 		}
+		memcpy(tmpVa,va,oldSize);
 		free_block(va);
 		return tmpVa;
 	}else{
