@@ -1537,30 +1537,88 @@ void test_realloc_block_FF()
 		if (is_correct) is_correct = check_list_size(expectedNumOfFreeBlks);
 
 	}
+
+
 	if (is_correct)
 	{
-		unseeneval += 40;
+
+		unseeneval += 10;
 	}
 
-	//[2] decrease size, next block free (Coalesce)
+	//[2] decrease size, next block free more than 16 (Coalesce)
+
+	is_correct = 1;
+	{
+		print_blocks_list(freeBlocksList);
+		cprintf("\n");
+		for(int i = 0; i < numOfAllocs*allocCntPerSize+1;i++){
+			cprintf("%x\n",startVAs[i]);
+		}
+
+	}
+	if (is_correct) {
+		unseeneval += 20;
+	}
+
+	//[3] decrease size, next block free less than 16 (Coalesce)
 	is_correct = 1;
 	{
 
 	}
 	if (is_correct) {
-		unseeneval += 30;
+		unseeneval += 20;
 	}
 
-
-	//[3] increase size, next block full (relocate)
+	//[4] increase size, next block full (relocate)
 	is_correct = 1;
 	{
 
 	}
 	if (is_correct) {
-		unseeneval += 30;
+		unseeneval += 20;
 	}
+	//[5] free block address
+	cprintf("realloc with free block address\n");
+		is_correct = 1;
+		{
+			blockIndex = 0;
+			old_size = allocSizes[0] - sizeOfMetaData;/*20 B*/
+			new_size = allocSizes[2] - sizeOfMetaData;
+			expectedSize = allocSizes[2]; /*Same block size [Internal Framgmentation]*/
+			expectedVA = startVAs[blockIndex];
 
+			va = realloc_block_FF(startVAs[blockIndex], new_size);
+
+			if (check_block(va, expectedVA, expectedSize, 1) == 0)
+			{
+				is_correct = 0;
+				cprintf("test_realloc_block_FF #4.2.1: Failed\n");
+			}
+			//check content of reallocated block
+			if (*(startVAs[blockIndex]) != blockIndex || *(midVAs[blockIndex]) != blockIndex)
+			{
+				is_correct = 0;
+				cprintf("test_realloc_block_FF #4.2.2: WRONG REALLOC! content of the block is not correct. Expected %d, actual %d\n", blockIndex,*(startVAs[blockIndex]));
+			}
+
+			//Check # free blocks
+			if (is_correct) is_correct = check_list_size(expectedNumOfFreeBlks);
+
+		}
+		if (is_correct)
+		{
+
+			unseeneval += 10;
+		}
+
+	//[6] increase size and block free but not enough
+	is_correct = 1;
+	{
+
+	}
+	if (is_correct) {
+		unseeneval += 20;
+	}
 
 
 
