@@ -71,13 +71,17 @@ void print_blocks_list(struct MemBlock_LIST list)
 	cprintf("\nDynAlloc Blocks List:\n");
 	LIST_FOREACH(blk, &list)
 	{
-		void* prev;
+		uint32* prev;
 		void* nxt;
 		prev = nxt = blk;
-		prev = (uint32*)((char*)tmp+get_block_size(blk));
-		nxt = (uint32*)((char*)tmp+get_block_size(blk));
+		prev--;prev--;
+		uint32 prevSize = ((*prev) & ~(0x1)) ;
+		prevSize-=8;
+		prev = (uint32*)((char*)prev-prevSize);
+		nxt = (uint32*)((char*)nxt+get_block_size(blk));
 
-		cprintf("(address: %x,size: %d, isFree: %d)\n(address: %x,size: %d, isFree: %d)\n(address: %x,size: %d, isFree: %d)\n",blk, get_block_size(blk), is_free_block(blk)) ;
+		cprintf("start(prev: %x,size: %d, isFree: %d)\n(address: %x,size: %d, isFree: %d)\n(nxt: %x,size: %d, isFree: %d)end\n",prev,get_block_size(prev),
+				is_free_block(prev),blk, get_block_size(blk), is_free_block(blk),nxt,get_block_size(nxt),is_free_block(nxt)) ;
 	}
 	cprintf("=========================================\n");
 
@@ -434,8 +438,8 @@ void free_block(void *va)
 	    {
 	        next_empty = 1;
 	    }
-//	cprintf("%u\n",next_empty);
-//	cprintf("%u\n",prev_empty);
+	cprintf("%u\n",next_empty);
+	cprintf("%u\n",prev_empty);
 	uint32* new_va;
 	uint32 new_size;
 	struct BlockElement* prev =  LIST_PREV(free_block);
@@ -520,6 +524,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	void* nextVa = (uint32*)((char*)va + oldSize);
 	uint32 nextBlockSize = (*nextHeader) & ~(0x1);
 	bool isNextBlockFree = (~(*nextHeader) & 0x1);
+	cprintf("thisisnextblock %d",isNextBlockFree);
 	if(new_size==oldSize){
 		return va;
 	}
@@ -566,7 +571,9 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		return tmpVa;
 	}else{
 		neededSize*=-1;
+
 		if(neededSize>=16){
+			cprintf("then here?");
 			set_block_data(va,new_size,1);
 			uint32* newFreeVa = (uint32*)((char*)va + new_size);
 			set_block_data(newFreeVa,neededSize,1);
@@ -574,12 +581,15 @@ void *realloc_block_FF(void* va, uint32 new_size)
 			return va;
 		}
 		if(isNextBlockFree==1){
+			cprintf("are you there pookie?");
+			set_block_data(va,new_size,1);
 			uint32* newFreeVa = (uint32*)((char*)va + new_size);
 			set_block_data(newFreeVa,nextBlockSize + neededSize,0);
 			LIST_REMOVE(&freeBlocksList, (struct BlockElement*)nextVa);
 			list_insertion_sort((struct BlockElement*)newFreeVa);
 			return va;
 		}
+
 		return va;
 	}
 }
