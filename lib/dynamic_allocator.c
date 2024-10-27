@@ -557,13 +557,12 @@ void *realloc_block_FF(void* va, uint32 new_size)
 				list_insertion_sort((struct BlockElement*)newVa);
 				return va;
 			}
-
 			set_block_data(va,nextBlockSize+oldSize,1);
 			LIST_REMOVE(&freeBlocksList, (struct BlockElement*)nextVa);
 			return va;
 
 		}
-		void* tmpVa = alloc_block_FF(new_size);
+		void* tmpVa = alloc_block_FF(new_size-(2*sizeof(int)));
 		if(tmpVa!=NULL){
 			memcpy(tmpVa,va,oldSize);
 		}
