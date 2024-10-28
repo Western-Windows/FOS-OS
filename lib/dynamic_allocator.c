@@ -450,8 +450,8 @@ void free_block(void *va)
 	    {
 	        next_empty = 1;
 	    }
-	cprintf("%u\n",next_empty);
-	cprintf("%u\n",prev_empty);
+//	cprintf("%u\n",next_empty);
+//	cprintf("%u\n",prev_empty);
 	uint32* new_va;
 	uint32 new_size;
 	struct BlockElement* prev =  LIST_PREV(free_block);
@@ -530,7 +530,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	new_size+=(2*sizeof(uint32));
 	uint32 oldSize = get_block_size(va);
 	int neededSize = new_size - oldSize;
-	cprintf("%d\n",oldSize);
+	//cprintf("%d\n",oldSize);
 	bool isFree = is_free_block(va);
 	uint32* nextHeader = (uint32*)((char*)va + oldSize - sizeof(uint32));
 	void* nextVa = (uint32*)((char*)va + oldSize);

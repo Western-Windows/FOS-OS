@@ -679,7 +679,7 @@ void test_free_block_FF()
 	for (int i = 0; i < numOfAllocs; ++i)
 	{
 //		cprintf("test#%d\n",i);
-//		free_block(startVAs[i*allocCntPerSize]);
+		free_block(startVAs[i*allocCntPerSize]);
 		if (check_block(startVAs[i*allocCntPerSize], startVAs[i*allocCntPerSize], allocSizes[i], 0) == 0)
 		{
 			is_correct = 0;
