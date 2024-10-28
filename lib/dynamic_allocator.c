@@ -71,6 +71,18 @@ void print_blocks_list(struct MemBlock_LIST list)
 	cprintf("\nDynAlloc Blocks List:\n");
 	LIST_FOREACH(blk, &list)
 	{
+		cprintf("(size: %d, isFree: %d)\n", get_block_size(blk), is_free_block(blk)) ;
+	}
+	cprintf("=========================================\n");
+}
+
+void blocks(struct MemBlock_LIST list)
+{
+	cprintf("=========================================\n");
+	struct BlockElement* blk ;
+	cprintf("\nDynAlloc Blocks List:\n");
+	LIST_FOREACH(blk, &list)
+	{
 		uint32* prev;
 		void* nxt;
 		prev = nxt = blk;
@@ -287,7 +299,7 @@ void *alloc_block_FF(uint32 size)
 			// No space found.
 			if (freeBlockSize < totalRequiredSize)
 			{
-				cprintf("hello pookie i will haunt u  \n");
+//				cprintf("hello pookie i will haunt u  \n");
 				it = LIST_NEXT((struct BlockElement*)it);
 			}
 		}
@@ -529,7 +541,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		return va;
 	}
 	if(isFree==1){
-		cprintf("thisisnextblock %d",isNextBlockFree);
+//		cprintf("thisisnextblock %d",isNextBlockFree);
 		if(oldSize>=new_size){
 			neededSize*=-1;
 			if(neededSize>=16){
@@ -575,7 +587,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		neededSize*=-1;
 
 		if(neededSize>=16){
-			cprintf("then here?");
+//			cprintf("then here?");
 			set_block_data(va,new_size,1);
 			uint32* newFreeVa = (uint32*)((char*)va + new_size);
 			set_block_data(newFreeVa,neededSize,1);
@@ -583,7 +595,7 @@ void *realloc_block_FF(void* va, uint32 new_size)
 			return va;
 		}
 		if(isNextBlockFree==1){
-			cprintf("are you there pookie?");
+//			cprintf("are you there pookie?");
 			set_block_data(va,new_size,1);
 			uint32* newFreeVa = (uint32*)((char*)va + new_size);
 			set_block_data(newFreeVa,nextBlockSize + neededSize,0);
@@ -655,7 +667,7 @@ void list_insertion_sort(struct BlockElement* free_block)
 		{
 			if (free_block > current_block)
 			{
-				cprintf("%x at tail\n", free_block);
+//				cprintf("%x at tail\n", free_block);
 				LIST_INSERT_AFTER(&freeBlocksList, current_block, free_block);
 				gg=1;
 				break;
@@ -672,7 +684,7 @@ void list_insertion_sort(struct BlockElement* free_block)
 			// If block should be before current block
 			if (free_block < current_block && free_block > LIST_PREV(current_block))
 			{
-				cprintf("%x before %x \n", free_block, current_block);
+//				cprintf("%x before %x \n", free_block, current_block);
 				LIST_INSERT_BEFORE(&freeBlocksList, current_block, free_block);
 				gg=1;
 				break;
@@ -680,7 +692,7 @@ void list_insertion_sort(struct BlockElement* free_block)
 			// If block should be after current block
 			else if(free_block > current_block && free_block < LIST_NEXT(current_block))
 			{
-				cprintf("%x after %x \n", free_block, current_block);
+//				cprintf("%x after %x \n", free_block, current_block);
 				LIST_INSERT_AFTER(&freeBlocksList, current_block, free_block);
 				gg=1;
 				break;

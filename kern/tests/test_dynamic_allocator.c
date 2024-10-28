@@ -1664,16 +1664,17 @@ void test_realloc_block_FF()
 
 
 		//checks and debugging stuff
-		print_blocks_list(freeBlocksList);
-			cprintf("\n");
-			for(int i = 0; i < numOfAllocs*allocCntPerSize+1;i++){
-				cprintf("indx %d , %x\n",i, startVAs[i]);
-			}
+//		print_blocks_list(freeBlocksList);
+//			cprintf("\n");
+//			for(int i = 0; i < numOfAllocs*allocCntPerSize+1;i++){
+//				cprintf("indx %d , %x\n",i, startVAs[i]);
+//			}
 		//*end of checking and debugging stuff*//
 
 
 
 	//[5] increase size and block free but not enough
+			cprintf("increase size and block free but not enough");
 	is_correct = 1;
 	{
 		blockIndex = 1200;
@@ -1747,12 +1748,12 @@ void test_realloc_block_FF()
 
 			unseeneval += 10;
 		}
-		print_blocks_list(freeBlocksList);
+//		print_blocks_list(freeBlocksList);
 	//[7] increase size, next block full (relocate)
 		is_correct = 1;
 					{
 			va = realloc_block_FF(NULL, 3064);
-			cprintf("%x",va);
+//			cprintf("%x",va);
 			blockIndex = 4;
 			old_size = 3064; /*4KB - sizeOfMetaData*/;
 			new_size = 10000000 ;
@@ -1792,8 +1793,8 @@ void test_realloc_block_FF()
 	//[8] increase size, next block full (relocate)
 			is_correct = 1;
 			{
-				print_blocks_list(freeBlocksList);
-				cprintf("%x",va);
+//				print_blocks_list(freeBlocksList);
+//				cprintf("%x",va);
 				blockIndex = 4;
 				old_size = 3064 - 8; /*4KB - sizeOfMetaData*/;
 				new_size = 4000 - 8;
@@ -1802,7 +1803,7 @@ void test_realloc_block_FF()
 				void* t = (void*) 0xf6000408;
 				va = realloc_block_FF(t, new_size);
 
-				cprintf("%d %d",get_block_size(va),is_free_block(va));
+//				cprintf("%d %d",get_block_size(va),is_free_block(va));
 				if (check_block(va, expectedVA, expectedSize, 1) == 0)
 				{
 					is_correct = 0;
