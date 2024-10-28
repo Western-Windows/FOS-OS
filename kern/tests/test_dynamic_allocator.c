@@ -302,7 +302,7 @@ void test_alloc_block_FF()
 		tstMidVAs[i] = va + actualSize/2 ;
 		tstEndVAs[i] = va + actualSize - sizeof(short);
 		//Check block
-		cprintf("test#%d\n",i);
+//		cprintf("test#%d\n",i);
 		expectedVA = (void*)expectedVAs[i];
 		if (check_block(va, expectedVA, testSizes[i], 1) == 0)
 		{
@@ -470,7 +470,7 @@ void test_alloc_block_BF()
 		tstEndVAs[i] = va + actualSize - sizeof(short);
 
 		//Check block
-		cprintf("test#%d\n",i);
+//		cprintf("test#%d\n",i);
 		expectedVA = (void*)expectedVAs[i];
 		if (check_block(va, expectedVA, testSizes[i], 1) == 0)
 		{
@@ -678,8 +678,8 @@ void test_free_block_FF()
 	//Free set of blocks with different sizes (first block of each size)
 	for (int i = 0; i < numOfAllocs; ++i)
 	{
-		cprintf("test#%d\n",i);
-		free_block(startVAs[i*allocCntPerSize]);
+//		cprintf("test#%d\n",i);
+//		free_block(startVAs[i*allocCntPerSize]);
 		if (check_block(startVAs[i*allocCntPerSize], startVAs[i*allocCntPerSize], allocSizes[i], 0) == 0)
 		{
 			is_correct = 0;
