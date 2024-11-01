@@ -14,7 +14,23 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 {
 	//TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - initialize_kheap_dynamic_allocator
 	// Write your code here, remove the panic and write your code
-	panic("initialize_kheap_dynamic_allocator() is not implemented yet...!!");
+	//panic("initialize_kheap_dynamic_allocator() is not implemented yet...!!");
+
+	start = (uint32*) daStart;  // Dynamic alloc start address.
+	segmentBreak = (uint32*)(daStart + initSizeToAllocate);  // Current Break.
+	hardLimit = (uint32*) daLimit;  // The start of the unusable memory.
+
+	uint32 maxSize = daLimit - daStart;  // Maximum size to allocate.
+
+    if (initSizeToAllocate > maxSize)
+    {
+        panic("Initial allocation size exceeds the defined limit.");  // Size exceeded usable memory size.
+    }
+    else
+    {
+    	initialize_dynamic_allocator(daStart, initSizeToAllocate);
+    	return 0;  // Successful initialization.
+    }
 }
 
 void* sbrk(int numOfPages)
