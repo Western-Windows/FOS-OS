@@ -92,10 +92,36 @@ void kfree(void* virtual_address)
 {
 	//TODO: [PROJECT'24.MS2 - #04] [1] KERNEL HEAP - kfree
 	// Write your code here, remove the panic and write your code
-	panic("kfree() is not implemented yet...!!");
+	//panic("kfree() is not implemented yet...!!");
 
 	//you need to get the size of the given allocation using its address
 	//refer to the project presentation and documentation for details
+
+	uint32 va = (uint32) virtual_address;
+	// Block Range
+	if (va>KERNEL_HEAP_START && va< HARD_LIMIT)//HARD_LIMIT should be declared in initialize
+	{
+		print("free block..\n");
+		free_block(va);
+	}
+	// Pages Range
+	else if(va>(HARD_LIMIT + PAGE_SIZE)&&va<KERNEL_HEAP_MAX)
+	{
+		uint32 *ptr_page_table;
+		struct Frame_Info *free_frame = get_frame_info(ptr_page_directory, va, &ptr_page_table);
+		if(free_frame == NULL)
+		{
+			print("already free frame\n");
+			return;
+		}
+		print("unmapping frame..\n");
+		unmap_frame(free_frame);
+	}
+	//Invalid address
+	else
+	{
+		panic("failed to free address %x, illegal address", va);
+	}
 
 }
 
