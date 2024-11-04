@@ -278,7 +278,9 @@ void *alloc_block_FF(uint32 size)
 		}
 		if (it == NULL) {
 			uint32 neededSize = totalRequiredSize;
-			sbrk(ROUNDUP(neededSize,(4*1024))/(4*1024));
+			if (sbrk(ROUNDUP(neededSize,(4*1024))/(4*1024)) == NULL) {
+				return NULL;
+			}
 			it = LIST_LAST(&freeBlocksList);
 		}
 		// External fragmentation "too large".

@@ -44,7 +44,7 @@ void* sbrk(int numOfPages)
 	if (available_pages < numOfPages) {
 		return (void *) -1;
 	}
-	(uint32)segmentBreak += size_added;
+	segmentBreak = (void *)((uint32)segmentBreak + size_added);
 	set_block_data(return_address,size_added,1);
 	free_block(return_address);
 	return return_address;
