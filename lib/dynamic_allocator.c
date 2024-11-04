@@ -98,6 +98,7 @@ void blocks(struct MemBlock_LIST list)
 	cprintf("=========================================\n");
 
 }
+
 //
 ////********************************************************************************//
 ////********************************************************************************//
@@ -167,7 +168,7 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 	// Checking if size greater than 16.
 	if (totalSize >= 16)
 	{
-//		cprintf("h");
+		cprintf("h");
 		// Checking if the "totalSize" is even or odd.
 		if ((totalSize % 2 == 1)) // odd "totalSize"
 	    {
@@ -176,38 +177,38 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 	    // else, odd no addition needed.
 
 		uint32 maskedLSBSize = totalSize;
-//		cprintf("e");
+		cprintf("e");
 		// Adding the "isAllocated" bit (LSB) to "totalSize".
 		if (isAllocated == 1)
 	    {
 	        totalSize++;		// LSB = 1 -> Allocated.
 	    }
 	    // else, LSB = 0 -> Free.
-//		cprintf("r");
+		cprintf("r");
 		// setting the block header and footer data.
 		va = (uint32*)va;  // original (constant) virtual address.
 		uint32* tempVa1 = va;
-//		cprintf("e");
-//		cprintf("=> VA: %x\n", va);
+		cprintf("e");
+		cprintf("=> VA: %x\n", va);
 
 		uint32* blockHeader = --tempVa1;
 		*blockHeader = totalSize;
 //
-//		cprintf("i");
-//		cprintf("=> Header address: %x\n", blockHeader);
-//		cprintf("=> H total block size: %u\n", *blockHeader);
+		cprintf("i");
+		cprintf("=> Header address: %x\n", blockHeader);
+		cprintf("=> H total block size: %u\n", *blockHeader);
 
 		uint32* tempVa2 = va;
-//		cprintf("a");
+		cprintf("a");
 		uint32 metaDataFreeSize = maskedLSBSize - (2 * sizeof(uint32));
-//		cprintf("m");
+		cprintf("m");
 		uint32* blockFooter = (uint32*)((char*)tempVa2 + metaDataFreeSize);
-//		cprintf("hehe");
+		cprintf("hehe");
 		*blockFooter = totalSize;
 //
 
-//		cprintf("=> Footer address: %x\n", blockFooter);
-//		cprintf("=> F total block size: %u\n", *blockFooter);
+		cprintf("=> Footer address: %x\n", blockFooter);
+		cprintf("=> F total block size: %u\n", *blockFooter);
 	}
 	else
 	{
@@ -278,11 +279,18 @@ void *alloc_block_FF(uint32 size)
 		}
 		if (it == NULL) {
 			uint32 neededSize = totalRequiredSize;
-			if (sbrk(ROUNDUP(neededSize,(4*1024))/(4*1024)) == NULL) {
+			uint32 numberOfPages = ROUNDUP(neededSize,PAGE_SIZE)/PAGE_SIZE;
+			cprintf("numberOfPagesCalled : %d\n",numberOfPages);
+			//cprintf("size of last block : %d\n\n",get_block_size(LIST_LAST(&freeBlocksList)));
+			void * return_address = sbrk(numberOfPages);
+			if (return_address == (void *)-1) {
 				return NULL;
 			}
-			it = LIST_LAST(&freeBlocksList);
+
+			it = (struct BlockElement*)return_address;
+			freeBlockSize = get_block_size(it);
 		}
+		cprintf("free : %d\nneeded : %d\n",freeBlockSize,totalRequiredSize);
 		// External fragmentation "too large".
 		if ((freeBlockSize - totalRequiredSize) >= 16)
 		{
@@ -303,7 +311,7 @@ void *alloc_block_FF(uint32 size)
 		// internal fragmentation "not large enough to split".
 		else if ((freeBlockSize - totalRequiredSize) < 16)
 		{
-			//cprintf("%u\n",(freeBlockSize-totalRequiredSize));
+			cprintf("%u\n",(freeBlockSize-totalRequiredSize));
 			set_block_data(it, freeBlockSize, 1);
 			LIST_REMOVE(&freeBlocksList, (struct BlockElement*)it);
 		}
