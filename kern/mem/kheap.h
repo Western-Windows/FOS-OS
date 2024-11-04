@@ -46,4 +46,5 @@ int numOfKheapVACalls ;
 void* start;
 void* segmentBreak;
 void* hardLimit;
+
 #endif // FOS_KERN_KHEAP_H_

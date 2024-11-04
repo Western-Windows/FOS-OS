@@ -68,24 +68,10 @@ void* sbrk(int numOfPages)
 	 */
 
 	//MS2: COMMENT THIS LINE BEFORE START CODING==========
-	//return (void*)-1 ;
+	return (void*)-1 ;
 	//====================================================
 
 	//TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
-	if (numOfPages == 0) {
-		return segmentBreak;
-	}
-	uint32 available_size = (uint32)hardLimit - (uint32)segmentBreak;
-	uint32 available_pages = available_size / (1024*4);
-	uint32 size_added = (numOfPages * 4 * 1024);
-	void* return_address = segmentBreak;
-	if (available_pages < numOfPages) {
-		return (void *) -1;
-	}
-	segmentBreak = (void *)((uint32)segmentBreak + size_added);
-	set_block_data(return_address,size_added,1);
-	free_block(return_address);
-	return return_address;
 	// Write your code here, remove the panic and write your code
 	panic("sbrk() is not implemented yet...!!");
 }
