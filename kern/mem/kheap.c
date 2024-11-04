@@ -80,7 +80,7 @@ void* sbrk(int numOfPages)
 	uint32 size_added = (numOfPages * 4 * 1024);
 	void* return_address = segmentBreak;
 	if (available_pages < numOfPages) {
-		return (void *) -1;
+		return NULL;
 	}
 	segmentBreak = (void *)((uint32)segmentBreak + size_added);
 	set_block_data(return_address,size_added,1);
@@ -96,6 +96,8 @@ void* kmalloc(unsigned int size)
 {
 	//TODO: [PROJECT'24.MS2 - #03] [1] KERNEL HEAP - kmalloc
 	// Write your code here, remove the panic and write your code
+
+	return alloc_block_FF(size);
 	kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 
 	// use "isKHeapPlacementStrategyFIRSTFIT() ..." functions to check the current strategy
