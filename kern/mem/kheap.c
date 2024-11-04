@@ -16,21 +16,43 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 	// Write your code here, remove the panic and write your code
 	//panic("initialize_kheap_dynamic_allocator() is not implemented yet...!!");
 
-	start = (uint32*) daStart;  // Dynamic alloc start address.
+	start = (uint32*) daStart;  // Dynamic allocation start address.
 	segmentBreak = (uint32*)(daStart + initSizeToAllocate);  // Current Break.
 	hardLimit = (uint32*) daLimit;  // The start of the unusable memory.
 
-	uint32 maxSize = daLimit - daStart;  // Maximum size to allocate.
+	uint32 maxRange = daLimit - daStart;  // Maximum size to allocate.
 
-    if (initSizeToAllocate > maxSize)
+    if (initSizeToAllocate > maxRange)
     {
-        panic("Initial allocation size exceeds the defined limit.");  // Size exceeded usable memory size.
+        panic("Allocation size exceeds the limit.");  // Size exceeded usable memory size.
     }
-    else
+
+    uint32 currentAddress = daStart;
+    uint32 givenRange = daStart + initSizeToAllocate;
+
+    while (currentAddress < givenRange)
     {
-    	initialize_dynamic_allocator(daStart, initSizeToAllocate);
-    	return 0;  // Successful initialization.
+    	// Allocation of frames in memory.
+    	struct FrameInfo*  frame = NULL;
+    	int allocateResult = allocate_frame(&frame);
+    	if (allocateResult == E_NO_MEM)
+    	{
+            panic("No physical memory available to allocate frame.");  // No memory.
+    	}
+
+    	// Mapping of frames.
+    	allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_USER|PERM_WRITEABLE);
+    	if (allocateResult == E_NO_MEM)
+    	{
+            free_frame(frame);
+            panic("No physical memory available for page table.");  // No memory.
+    	}
+
+    	currentAddress += PAGE_SIZE;
     }
+
+    initialize_dynamic_allocator(daStart, initSizeToAllocate);
+    return 0;  // Successful initialization.
 }
 
 void* sbrk(int numOfPages)

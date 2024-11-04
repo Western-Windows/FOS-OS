@@ -135,8 +135,7 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 
 	// END Block address and value
 	uint32* limit = (uint32*) (daStart + initSizeOfAllocatedSpace);
-	uint32* tempLimit = limit;
-	uint32* end_block = --tempLimit;
+	uint32* end_block = --limit;
 	*end_block = 1;
 
 	// Block Header
