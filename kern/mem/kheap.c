@@ -68,7 +68,7 @@ void* sbrk(int numOfPages)
 	 */
 
 	//MS2: COMMENT THIS LINE BEFORE START CODING==========
-	return (void*)-1 ;
+	//return (void*)-1 ;
 	//====================================================
 
 	//TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
@@ -126,7 +126,6 @@ void* sbrk(int numOfPages)
 	// Write your code here, remove the panic and write your code
 	panic("sbrk() is not implemented yet...!!");
 }
-
 //TODO: [PROJECT'24.MS2 - BONUS#2] [1] KERNEL HEAP - Fast Page Allocator
 
 void* kmalloc(unsigned int size)
