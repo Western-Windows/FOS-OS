@@ -77,82 +77,60 @@ void* sbrk(int numOfPages)
 }
 
 //TODO: [PROJECT'24.MS2 - BONUS#2] [1] KERNEL HEAP - Fast Page Allocator
-
-#define NUM_OF_KHEAP_PAGES ((KERNEL_HEAP_MAX-KERNEL_HEAP_START)/PAGE_SIZE);//4095
-// uint32 bitmap [NUM_OF_KHEAP_PAGES/32];
-bool pageStatus [NUM_OF_KHEAP_PAGES];
-int array_segment_tree[NUM_OF_KHEAP_PAGES>>1];
-void allocatePage(int index){
-    pageStatus[index] = 1;
-}
-void freePage(int index){
-    pageStatus[index] = 0;
-}
-
-void bulid(int node, int start , int end){
-    if(start == end){
-        array_segment_tree[node] = pageStatus[start] ? 1:0;
-    }else{
-        int mid = (start+end)>>1;
-        bulid(2*node , start , mid);
-        build(2*node+1, mid+1,end);
-        array_segment_tree[node] = array_segment_tree[2*node] + array_segment_tree[2*node+1];
-    }
-}
-
-void update_segment(int node , int start , int end , int l , int r , int val){
-    if(start == end){
-        pageStatus[end] = val == 1;
-        array_segment_tree[node] = val;
-    }else{
-        int mid = (start+end)>>1;
-        update_segment(2*node , start , mid , l , r , val);
-        update_segment(2*node+1 , mid +1 , end , l , r , val);
-        array_segment_tree[node] = array_segment_tree[2*node] + array_segment_tree[2*node+1];
-    }
-
-}
-int query(int node , int start , int end,int size){
-    if(start==end){
-        if(pageStatus[start] == 1){
-            return 4;
-        }else{
-            return start;
-        }
-    }else{
-        int mid = (start+end)>>1;
-        int l = query(2*node , start , mid,size);
-        if(l != 4){
-            return l;
-        }
-        int r = query(2*node+1 ,mid+1, end,size);
-        if(r != 4){
-            return r;
-        }else{
-            return 4;
-        }
-    }
-}
-void* kmalloc(unsigned int size)
-{
-    if(size<=DYN_ALLOC_MAX_BLOCK_SIZE){
-		return alloc_block_FF(size);
+void updatePage(int index,int size){
+	for(int i = index; i < size;i++){
+		pageStatus[i] = ~pageStatus[i];
 	}
-    size = ROUNDUP(size,PAGE_SIZE)/PAGE_SIZE;
-    int indx = /*query()*/;
-    update_segment(1,indx,indx+size,1);
-    int actualIndx = indx*PAGE_SIZE;
-    void* va = (char*)hardLimit + 4;
-    va = (char*)va+actualIndx;
-    struct FrameInfo*  frame = NULL;
-    int allocateResult = allocate_frame(&frame);
-    allocateResult = map_frame(ptr_page_directory, frame, va, PERM_USER|PERM_WRITEABLE);
-    if (allocateResult == E_NO_MEM)
-    {
-        free_frame(frame);
-         return NULL;
-    }
-    return va;
+}
+void* kmalloc(unsigned int size){
+	 if(size<=DYN_ALLOC_MAX_BLOCK_SIZE){
+			return alloc_block_FF(size);
+		}
+	    size = ROUNDUP(size,PAGE_SIZE)/PAGE_SIZE;
+	    int indx = -1,tempSize=0;
+	    bool checkSegment = 0;
+	    for(int i =0; i <= NUM_OF_KHEAP_PAGES;i++){
+	    	checkSegment|=pageStatus[i];
+	    	if(checkSegment == 0){
+	    		if(indx==-1)
+	    			indx = i;
+	    		tempSize++;
+	    	}
+	    	else
+	    	{
+	    		if(tempSize>=size){
+	    			updatePage(indx,size);
+	    			int actualIndx = indx*PAGE_SIZE;
+	    			void* va = (char*)hardLimit + 4;
+	    			va = (char*)va+actualIndx;
+	    			struct FrameInfo*  frame = NULL;
+	    		    int allocateResult = allocate_frame(&frame);
+	    		    allocateResult = map_frame(ptr_page_directory, frame, va, PERM_USER|PERM_WRITEABLE);
+	    		    if (allocateResult == E_NO_MEM){
+	    		    	free_frame(frame);
+	    		    	return NULL;
+	    		    }
+	    		    return va;
+	    		}
+	    		tempSize=0;
+	    		indx = -1;
+	    	}
+	    }
+	    if(tempSize>=size){
+			updatePage(indx,size);
+			int actualIndx = indx*PAGE_SIZE;
+			void* va = (char*)hardLimit + 4;
+			va = (char*)va+actualIndx;
+			struct FrameInfo*  frame = NULL;
+			int allocateResult = allocate_frame(&frame);
+			allocateResult = map_frame(ptr_page_directory, frame, va, PERM_USER|PERM_WRITEABLE);
+			if (allocateResult == E_NO_MEM){
+				free_frame(frame);
+				return NULL;
+			}
+			return va;
+		}
+	    return NULL;
 }
 
 void kfree(void* virtual_address)
