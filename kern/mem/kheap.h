@@ -4,7 +4,7 @@
 #ifndef FOS_KERNEL
 # error "This is a FOS kernel header; user programs should not #include it"
 #endif
-
+#include <inc/memlayout.h>
 #include <inc/types.h>
 
 
@@ -37,7 +37,7 @@ void *krealloc(void *virtual_address, unsigned int new_size);
 
 unsigned int kheap_virtual_address(unsigned int physical_address);
 unsigned int kheap_physical_address(unsigned int virtual_address);
-bool pageStatus [NUM_OF_KHEAP_PAGES+5];
+bool pageStatus [NUM_OF_KHEAP_PAGES + 5];
 int numOfKheapVACalls ;
 
 

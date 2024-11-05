@@ -82,6 +82,16 @@ void updatePage(int index,int size){
 		pageStatus[i] = ~pageStatus[i];
 	}
 }
+void* allocMap(void* va){
+	struct FrameInfo*  frame = NULL;
+	int allocateResult = allocate_frame(&frame);
+	allocateResult = map_frame(ptr_page_directory, frame,(uint32)va, PERM_USER|PERM_WRITEABLE);
+	if (allocateResult == E_NO_MEM){
+		free_frame(frame);
+		return NULL;
+	}
+	return va;
+}
 void* kmalloc(unsigned int size){
 	 if(size<=DYN_ALLOC_MAX_BLOCK_SIZE){
 			return alloc_block_FF(size);
@@ -103,32 +113,18 @@ void* kmalloc(unsigned int size){
 	    			int actualIndx = indx*PAGE_SIZE;
 	    			void* va = (char*)hardLimit + 4;
 	    			va = (char*)va+actualIndx;
-	    			struct FrameInfo*  frame = NULL;
-	    		    int allocateResult = allocate_frame(&frame);
-	    		    allocateResult = map_frame(ptr_page_directory, frame, va, PERM_USER|PERM_WRITEABLE);
-	    		    if (allocateResult == E_NO_MEM){
-	    		    	free_frame(frame);
-	    		    	return NULL;
-	    		    }
-	    		    return va;
+	    		    return allocMap(va);
 	    		}
 	    		tempSize=0;
 	    		indx = -1;
 	    	}
 	    }
 	    if(tempSize>=size){
-			updatePage(indx,size);
+	    	updatePage(indx,size);
 			int actualIndx = indx*PAGE_SIZE;
 			void* va = (char*)hardLimit + 4;
 			va = (char*)va+actualIndx;
-			struct FrameInfo*  frame = NULL;
-			int allocateResult = allocate_frame(&frame);
-			allocateResult = map_frame(ptr_page_directory, frame, va, PERM_USER|PERM_WRITEABLE);
-			if (allocateResult == E_NO_MEM){
-				free_frame(frame);
-				return NULL;
-			}
-			return va;
+			return allocMap(va);
 		}
 	    return NULL;
 }
