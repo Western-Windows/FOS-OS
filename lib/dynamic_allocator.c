@@ -263,18 +263,44 @@ void *alloc_block_FF(uint32 size)
 
 		struct BlockElement* headOfFreeList = LIST_FIRST(&freeBlocksList);
 		struct BlockElement* it = headOfFreeList;
-		uint32 freeBlockSize;
+
 		while (it) // it != NULL
 		{
-			freeBlockSize = get_block_size(it);
+			uint32 freeBlockSize = get_block_size(it);
 			//cprintf("%u\n",freeBlockSize);
+
 			// In case of large block.
 			if (freeBlockSize >= totalRequiredSize)
 			{
-				break;
-				//return it;
+				// External fragmentation "too large".
+				if ((freeBlockSize - totalRequiredSize) >= 16)
+				{
+					// Alloc block in large free block.
+					set_block_data(it, totalRequiredSize, 1);
+
+					// split free block from alloc block in large free block.
+					uint32 offset = totalRequiredSize;
+					uint32* vaOfNewSplitBlock = (uint32*)((char*)it + offset);
+					// Delete large free block.
+					LIST_REMOVE(&freeBlocksList, (struct BlockElement*)it);
+					uint32 sizeOfNewSplitBlock = freeBlockSize - totalRequiredSize;
+					set_block_data(vaOfNewSplitBlock, sizeOfNewSplitBlock, 0);
+
+					// call sort, and insert free splitted block.
+					list_insertion_sort((struct BlockElement*)vaOfNewSplitBlock);
+				}
+				// internal fragmentation "not large enough to split".
+				else if ((freeBlockSize - totalRequiredSize) < 16)
+				{
+					//cprintf("%u\n",(freeBlockSize-totalRequiredSize));
+					set_block_data(it, freeBlockSize, 1);
+					LIST_REMOVE(&freeBlocksList, (struct BlockElement*)it);
+				}
+				return it;
 			}
 			// No space found.
+			if (freeBlockSize < totalRequiredSize)
+			{
 //				cprintf("hello pookie i will haunt u  \n");
 			it = LIST_NEXT((struct BlockElement*)it);
 		}
