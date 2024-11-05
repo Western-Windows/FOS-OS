@@ -72,6 +72,57 @@ void* sbrk(int numOfPages)
 	//====================================================
 
 	//TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
+	if (numOfPages == 0) {
+		return segmentBreak;
+	}
+	uint32 available_size = (uint32)hardLimit - (uint32)segmentBreak;
+	uint32 available_pages = available_size / PAGE_SIZE;
+	uint32 size_added = (numOfPages * PAGE_SIZE);
+
+	void* return_address = segmentBreak;
+
+	//cprintf("number of available pages: %d\n",available_pages);
+	//check if number of pages needed exceeds number of pages available
+	if (available_pages < numOfPages) {
+		return (void *) -1;
+	}
+	//cprintf("position of previous segment break: %p\n",segmentBreak);
+	segmentBreak = (uint32*)((char*)segmentBreak + size_added);
+
+	void* currentAddress = return_address;
+	void* givenRange = segmentBreak;
+	while (currentAddress < givenRange)
+	{
+		// Allocation of frames in memory.
+		struct FrameInfo*  frame = NULL;
+		int allocateResult = allocate_frame(&frame);
+		if (allocateResult == E_NO_MEM)
+		{
+			panic("No physical memory available to allocate frame.");  // No memory.
+		}
+
+		// Mapping of frames.
+		allocateResult = map_frame(ptr_page_directory, frame, (uint32)currentAddress, PERM_USER|PERM_WRITEABLE);
+		if (allocateResult == E_NO_MEM)
+		{
+			free_frame(frame);
+			panic("No physical memory available for page table.");  // No memory.
+		}
+
+		currentAddress += PAGE_SIZE;
+	}
+
+	//cprintf("size added : %d\n",size_added);
+	uint32* segmentBreak_in_uint32 = (uint32*)segmentBreak;
+	uint32* new_end_block = segmentBreak_in_uint32 - 1;
+	//cprintf("position of the new end block %p\n",new_end_block);
+	//cprintf("position of present segment break: %p\n",segmentBreak);
+	*new_end_block = 1;
+
+	set_block_data(return_address,size_added,1);
+	//cprintf("size of return address : %d\n",get_block_size(return_address));
+	free_block(return_address);
+	return return_address;
 	// Write your code here, remove the panic and write your code
 	panic("sbrk() is not implemented yet...!!");
 }
@@ -82,6 +133,8 @@ void* kmalloc(unsigned int size)
 {
 	//TODO: [PROJECT'24.MS2 - #03] [1] KERNEL HEAP - kmalloc
 	// Write your code here, remove the panic and write your code
+
+	return alloc_block_FF(size);
 	kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 
 	// use "isKHeapPlacementStrategyFIRSTFIT() ..." functions to check the current strategy
