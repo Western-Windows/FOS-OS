@@ -30,26 +30,10 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
     uint32 currentAddress = daStart;
     uint32 givenRange = daStart + initSizeToAllocate;
 
-    while (currentAddress < givenRange)
-    {
-    	// Allocation of frames in memory.
-    	struct FrameInfo*  frame = NULL;
-    	int allocateResult = allocate_frame(&frame);
-    	if (allocateResult == E_NO_MEM)
-    	{
-            panic("No physical memory available to allocate frame.");  // No memory.
-    	}
-
-    	// Mapping of frames.
-    	allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_USER|PERM_WRITEABLE);
-    	if (allocateResult == E_NO_MEM)
-    	{
-            free_frame(frame);
-            panic("No physical memory available for page table.");  // No memory.
-    	}
-
-    	currentAddress += PAGE_SIZE;
-    }
+    if (allocateMapFrame(currentAddress,givenRange) == E_NO_MEM)
+	{
+		panic("No physical memory available for page table.");  // No memory.
+	}
 
     initialize_dynamic_allocator(daStart, initSizeToAllocate);
     return 0;  // Successful initialization.
@@ -91,25 +75,9 @@ void* sbrk(int numOfPages)
 
 	void* currentAddress = return_address;
 	void* givenRange = segmentBreak;
-	while (currentAddress < givenRange)
+	if (allocateMapFrame((uint32)currentAddress,(uint32)givenRange) == E_NO_MEM)
 	{
-		// Allocation of frames in memory.
-		struct FrameInfo*  frame = NULL;
-		int allocateResult = allocate_frame(&frame);
-		if (allocateResult == E_NO_MEM)
-		{
-			panic("No physical memory available to allocate frame.");  // No memory.
-		}
-
-		// Mapping of frames.
-		allocateResult = map_frame(ptr_page_directory, frame, (uint32)currentAddress, PERM_USER|PERM_WRITEABLE);
-		if (allocateResult == E_NO_MEM)
-		{
-			free_frame(frame);
-			panic("No physical memory available for page table.");  // No memory.
-		}
-
-		currentAddress += PAGE_SIZE;
+		return (void *) -1;
 	}
 
 	//cprintf("size added : %d\n",size_added);
@@ -124,58 +92,82 @@ void* sbrk(int numOfPages)
 	free_block(return_address);
 	return return_address;
 	// Write your code here, remove the panic and write your code
-	panic("sbrk() is not implemented yet...!!");
 }
 //TODO: [PROJECT'24.MS2 - BONUS#2] [1] KERNEL HEAP - Fast Page Allocator
 void updatePage(int index,int size){
 	for(int i = index; i < size;i++){
-		pageStatus[i] = ~pageStatus[i];
+		pageStatus[i] = !pageStatus[i];
 	}
 }
-void* allocMap(void* va){
-	struct FrameInfo*  frame = NULL;
-	int allocateResult = allocate_frame(&frame);
-	allocateResult = map_frame(ptr_page_directory, frame,(uint32)va, PERM_USER|PERM_WRITEABLE);
-	if (allocateResult == E_NO_MEM){
-		free_frame(frame);
-		return NULL;
-	}
-	return va;
-}
+//CHANGE PAGESTATUS SIZE INTO CORRECT SIZE
+//CHECK ALLOCATE AFTER
 void* kmalloc(unsigned int size){
 	 if(size<=DYN_ALLOC_MAX_BLOCK_SIZE){
+//		 cprintf("i am a block\n");
 			return alloc_block_FF(size);
 		}
-	    size = ROUNDUP(size,PAGE_SIZE)/PAGE_SIZE;
-	    int indx = -1,tempSize=0;
+//	 	cprintf("%d",isKHeapPlacementStrategyFIRSTFIT());
+	    size = ROUNDUP(size,PAGE_SIZE);
+	    cprintf("size :%d\n ",size);
+	    uint32 pagesNumber = size/PAGE_SIZE;
+	    cprintf("pn :%d\n ",pagesNumber);
+
+	    int startIndex = -1,tempSize=0;
 	    bool checkSegment = 0;
-	    for(int i =0; i <= NUM_OF_KHEAP_PAGES;i++){
+//	    for(int i =0; i <= 32766;i++){
+//	    	    	cprintf("%d",pageStatus[i]);
+//	    }
+
+//	    cprintf("%d",  ((KERNEL_HEAP_MAX-((uint32)hardLimit+4))/PAGE_SIZE)
+
+	    for(int i =0; i < 32766;i++){
+
 	    	checkSegment|=pageStatus[i];
 	    	if(checkSegment == 0){
-	    		if(indx==-1)
-	    			indx = i;
+	    		if(startIndex==-1)
+	    			startIndex = i;
 	    		tempSize++;
 	    	}
 	    	else
 	    	{
-	    		if(tempSize>=size){
-	    			updatePage(indx,size);
-	    			int actualIndx = indx*PAGE_SIZE;
-	    			void* va = (char*)hardLimit + 4;
-	    			va = (char*)va+actualIndx;
-	    		    return allocMap(va);
+	    		if(tempSize>=pagesNumber){
+
+	    			cprintf("startIndex :%d\n ",startIndex);
+
+	    			uint32 actualIndx = startIndex*PAGE_SIZE;
+	    			void* va = (uint32*)((uint32)hardLimit + PAGE_SIZE);
+	    			va = (uint32*)((uint32)va+actualIndx);
+	    			if (allocateMapFrame((uint32) va,(uint32)va+size) == E_NO_MEM)
+					{cprintf("%x\n",va);
+						return NULL;
+					}
+	    			updatePage(startIndex,pagesNumber);
+
+
+	    		    return va;
 	    		}
-	    		tempSize=0;
-	    		indx = -1;
+	    		tempSize = 0;
+	    		startIndex = -1;
+	    		checkSegment = 0;
 	    	}
 	    }
-	    if(tempSize>=size){
-	    	updatePage(indx,size);
-			int actualIndx = indx*PAGE_SIZE;
-			void* va = (char*)hardLimit + 4;
-			va = (char*)va+actualIndx;
-			return allocMap(va);
+	    if(tempSize>=pagesNumber){
+			cprintf("tempSize :%d\n ",tempSize);
+			cprintf("indx :%d\n ",startIndex);
+
+			int actualIndx = startIndex*PAGE_SIZE;
+			void* va = (uint32*)((uint32)hardLimit + PAGE_SIZE);
+			va = (uint32*)((uint32)va+actualIndx);
+			cprintf("va :%x\n ",va);
+
+			if (allocateMapFrame((uint32) va,(uint32)va+size) == E_NO_MEM);
+			{cprintf("%x\n",hardLimit);
+				return NULL;
+			}
+			updatePage(startIndex,pagesNumber);
+			return va;
 		}
+
 	    return NULL;
 }
 
@@ -233,3 +225,34 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	return NULL;
 	panic("krealloc() is not implemented yet...!!");
 }
+
+/********************Helper Functions***************************/
+
+int allocateMapFrame(uint32 currentAddress , uint32 limit){
+    while (currentAddress < limit)
+    {
+    	// Allocation of frames in memory.
+    	struct FrameInfo*  frame = NULL;
+    	int allocateResult = allocate_frame(&frame);
+    	if (allocateResult == E_NO_MEM)
+    	{
+            panic("No physical memory available to allocate frame.");  // No memory.
+    	}
+
+    	// Mapping of frames.
+    	allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_WRITEABLE);
+    	if (allocateResult == E_NO_MEM)
+    	{
+            free_frame(frame);
+            return E_NO_MEM;
+    	}
+    	currentAddress += PAGE_SIZE;
+    }
+    return 0;
+}
+
+
+
+
+
+
