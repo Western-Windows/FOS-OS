@@ -94,80 +94,38 @@ void* sbrk(int numOfPages)
 	// Write your code here, remove the panic and write your code
 }
 //TODO: [PROJECT'24.MS2 - BONUS#2] [1] KERNEL HEAP - Fast Page Allocator
-void updatePage(int index,int size){
-	for(int i = index; i < size;i++){
-		pageStatus[i] = !pageStatus[i];
-	}
-}
-//CHANGE PAGESTATUS SIZE INTO CORRECT SIZE
-//CHECK ALLOCATE AFTER
 void* kmalloc(unsigned int size){
 	 if(size<=DYN_ALLOC_MAX_BLOCK_SIZE){
-//		 cprintf("i am a block\n");
 			return alloc_block_FF(size);
 		}
 //	 	cprintf("%d",isKHeapPlacementStrategyFIRSTFIT());
 	    size = ROUNDUP(size,PAGE_SIZE);
-	    cprintf("size :%d\n ",size);
 	    uint32 pagesNumber = size/PAGE_SIZE;
-	    cprintf("pn :%d\n ",pagesNumber);
-
 	    int startIndex = -1,tempSize=0;
 	    bool checkSegment = 0;
-//	    for(int i =0; i <= 32766;i++){
-//	    	    	cprintf("%d",pageStatus[i]);
-//	    }
-
-//	    cprintf("%d",  ((KERNEL_HEAP_MAX-((uint32)hardLimit+4))/PAGE_SIZE)
-
 	    for(int i =0; i < 32766;i++){
-
 	    	checkSegment|=pageStatus[i];
 	    	if(checkSegment == 0){
 	    		if(startIndex==-1)
 	    			startIndex = i;
 	    		tempSize++;
-	    	}
-	    	else
-	    	{
-	    		if(tempSize>=pagesNumber){
-
-	    			cprintf("startIndex :%d\n ",startIndex);
-
+	    		if(tempSize>=pagesNumber ){
 	    			uint32 actualIndx = startIndex*PAGE_SIZE;
-	    			void* va = (uint32*)((uint32)hardLimit + PAGE_SIZE);
-	    			va = (uint32*)((uint32)va+actualIndx);
-	    			if (allocateMapFrame((uint32) va,(uint32)va+size) == E_NO_MEM)
-					{cprintf("%x\n",va);
+	    			void* va = (uint32*)((char*)hardLimit + PAGE_SIZE);
+	    			va = (uint32*)((char*)va+actualIndx);
+	    			if (allocateMapFrame((uint32) va,(uint32)((char*)va+size)) == E_NO_MEM)
+					{
 						return NULL;
 					}
 	    			updatePage(startIndex,pagesNumber);
-
-
 	    		    return va;
 	    		}
+	    	}else{
 	    		tempSize = 0;
 	    		startIndex = -1;
 	    		checkSegment = 0;
 	    	}
 	    }
-	    if(tempSize>=pagesNumber){
-			cprintf("tempSize :%d\n ",tempSize);
-			cprintf("indx :%d\n ",startIndex);
-
-			int actualIndx = startIndex*PAGE_SIZE;
-			void* va = (uint32*)((uint32)hardLimit + PAGE_SIZE);
-			va = (uint32*)((uint32)va+actualIndx);
-			cprintf("va :%x\n ",va);
-
-			if (allocateMapFrame((uint32) va,(uint32)va+size) == E_NO_MEM);
-			{cprintf("%x\n",hardLimit);
-				return NULL;
-			}
-			updatePage(startIndex,pagesNumber);
-			return va;
-		}
-
 	    return NULL;
 }
 
@@ -229,6 +187,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 /********************Helper Functions***************************/
 
 int allocateMapFrame(uint32 currentAddress , uint32 limit){
+	int x =0;
     while (currentAddress < limit)
     {
     	// Allocation of frames in memory.
@@ -251,7 +210,11 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit){
     return 0;
 }
 
-
+void updatePage(int index,int size){
+	for(int i = index; i < index+size;i++){
+		pageStatus[i] = !pageStatus[i];
+	}
+}
 
 
 
