@@ -98,6 +98,7 @@ void blocks(struct MemBlock_LIST list)
 	cprintf("=========================================\n");
 
 }
+
 //
 ////********************************************************************************//
 ////********************************************************************************//
@@ -137,6 +138,7 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 	uint32* limit = (uint32*) (daStart + initSizeOfAllocatedSpace);
 	uint32* end_block = --limit;
 	*end_block = 1;
+	//cprintf("/////////end block is here : %p/n",end_block);
 
 	// Block Header
 	uint32* block_header = ++beg_block;
@@ -194,20 +196,20 @@ void set_block_data(void* va, uint32 totalSize, bool isAllocated)
 		*blockHeader = totalSize;
 //
 //		cprintf("i");
-//		cprintf("=> Header address: %x\n", blockHeader);
-//		cprintf("=> H total block size: %u\n", *blockHeader);
+		//cprintf("=> Header address: %x\n", blockHeader);
+		//cprintf("=> H total block size: %u\n", *blockHeader);
 
 		uint32* tempVa2 = va;
-//		cprintf("a");
+		//cprintf("a");
 		uint32 metaDataFreeSize = maskedLSBSize - (2 * sizeof(uint32));
-//		cprintf("m");
+		//cprintf("m");
 		uint32* blockFooter = (uint32*)((char*)tempVa2 + metaDataFreeSize);
-//		cprintf("hehe");
+		//cprintf("hehe");
 		*blockFooter = totalSize;
 //
 
-//		cprintf("=> Footer address: %x\n", blockFooter);
-//		cprintf("=> F total block size: %u\n", *blockFooter);
+		//cprintf("=> Footer address: %x\n", blockFooter);
+		//cprintf("=> F total block size: %u\n", *blockFooter);
 	}
 	else
 	{
@@ -261,50 +263,60 @@ void *alloc_block_FF(uint32 size)
 
 		struct BlockElement* headOfFreeList = LIST_FIRST(&freeBlocksList);
 		struct BlockElement* it = headOfFreeList;
-
+		uint32 freeBlockSize;
 		while (it) // it != NULL
 		{
-			uint32 freeBlockSize = get_block_size(it);
+			freeBlockSize = get_block_size(it);
 			//cprintf("%u\n",freeBlockSize);
-
 			// In case of large block.
 			if (freeBlockSize >= totalRequiredSize)
 			{
-				// External fragmentation "too large".
-				if ((freeBlockSize - totalRequiredSize) >= 16)
-				{
-					// Alloc block in large free block.
-					set_block_data(it, totalRequiredSize, 1);
-
-					// split free block from alloc block in large free block.
-					uint32 offset = totalRequiredSize;
-					uint32* vaOfNewSplitBlock = (uint32*)((char*)it + offset);
-					// Delete large free block.
-					LIST_REMOVE(&freeBlocksList, (struct BlockElement*)it);
-					uint32 sizeOfNewSplitBlock = freeBlockSize - totalRequiredSize;
-					set_block_data(vaOfNewSplitBlock, sizeOfNewSplitBlock, 0);
-
-					// call sort, and insert free splitted block.
-					list_insertion_sort((struct BlockElement*)vaOfNewSplitBlock);
-				}
-				// internal fragmentation "not large enough to split".
-				else if ((freeBlockSize - totalRequiredSize) < 16)
-				{
-					//cprintf("%u\n",(freeBlockSize-totalRequiredSize));
-					set_block_data(it, freeBlockSize, 1);
-					LIST_REMOVE(&freeBlocksList, (struct BlockElement*)it);
-				}
-				return it;
+				break;
+				//return it;
 			}
 			// No space found.
-			if (freeBlockSize < totalRequiredSize)
-			{
 //				cprintf("hello pookie i will haunt u  \n");
-				it = LIST_NEXT((struct BlockElement*)it);
-			}
+			it = LIST_NEXT((struct BlockElement*)it);
 		}
-		void* sbrkk = sbrk(0);
-		return NULL;
+		if (it == NULL) {
+			uint32 neededSize = totalRequiredSize;
+			uint32 numberOfPages = ROUNDUP(neededSize,PAGE_SIZE)/PAGE_SIZE;
+			//cprintf("numberOfPagesCalled : %d\n",numberOfPages);
+			//cprintf("size of last block : %d\n\n",get_block_size(LIST_LAST(&freeBlocksList)));
+			void * return_address = sbrk(numberOfPages);
+			if (return_address == (void *)-1) {
+				return NULL;
+			}
+
+			it = LIST_LAST(&freeBlocksList);
+			freeBlockSize = get_block_size(it);
+		}
+		cprintf("free : %d\nneeded : %d\n",freeBlockSize,totalRequiredSize);
+		// External fragmentation "too large".
+		if ((freeBlockSize - totalRequiredSize) >= 16)
+		{
+			// Alloc block in large free block.
+			set_block_data(it, totalRequiredSize, 1);
+
+			// split free block from alloc block in large free block.
+			uint32 offset = totalRequiredSize;
+			uint32* vaOfNewSplitBlock = (uint32*)((char*)it + offset);
+			// Delete large free block.
+			LIST_REMOVE(&freeBlocksList, (struct BlockElement*)it);
+			uint32 sizeOfNewSplitBlock = freeBlockSize - totalRequiredSize;
+			set_block_data(vaOfNewSplitBlock, sizeOfNewSplitBlock, 0);
+
+			// call sort, and insert free splitted block.
+			list_insertion_sort((struct BlockElement*)vaOfNewSplitBlock);
+		}
+		// internal fragmentation "not large enough to split".
+		else if ((freeBlockSize - totalRequiredSize) < 16)
+		{
+			//cprintf("%u\n",(freeBlockSize-totalRequiredSize));
+			set_block_data(it, freeBlockSize, 1);
+			LIST_REMOVE(&freeBlocksList, (struct BlockElement*)it);
+		}
+		return it;
 	}
 	else
 	{

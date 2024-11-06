@@ -4,7 +4,7 @@
 #ifndef FOS_KERNEL
 # error "This is a FOS kernel header; user programs should not #include it"
 #endif
-
+#include <inc/memlayout.h>
 #include <inc/types.h>
 
 
@@ -34,10 +34,10 @@ static inline uint8 isKHeapPlacementStrategyWORSTFIT(){if(_KHeapPlacementStrateg
 void* kmalloc(unsigned int size);
 void kfree(void* virtual_address);
 void *krealloc(void *virtual_address, unsigned int new_size);
-
+int allocateMapFrame(uint32 currentAddress , uint32 limit);
 unsigned int kheap_virtual_address(unsigned int physical_address);
 unsigned int kheap_physical_address(unsigned int virtual_address);
-
+bool pageStatus [32767];
 int numOfKheapVACalls ;
 
 

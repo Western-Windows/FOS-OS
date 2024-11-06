@@ -30,26 +30,10 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
     uint32 currentAddress = daStart;
     uint32 givenRange = daStart + initSizeToAllocate;
 
-    while (currentAddress < givenRange)
-    {
-    	// Allocation of frames in memory.
-    	struct FrameInfo*  frame = NULL;
-    	int allocateResult = allocate_frame(&frame);
-    	if (allocateResult == E_NO_MEM)
-    	{
-            panic("No physical memory available to allocate frame.");  // No memory.
-    	}
-
-    	// Mapping of frames.
-    	allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_USER|PERM_WRITEABLE);
-    	if (allocateResult == E_NO_MEM)
-    	{
-            free_frame(frame);
-            panic("No physical memory available for page table.");  // No memory.
-    	}
-
-    	currentAddress += PAGE_SIZE;
-    }
+    if (allocateMapFrame(currentAddress,givenRange) == E_NO_MEM)
+	{
+		panic("No physical memory available for page table.");  // No memory.
+	}
 
     initialize_dynamic_allocator(daStart, initSizeToAllocate);
     return 0;  // Successful initialization.
@@ -68,24 +52,81 @@ void* sbrk(int numOfPages)
 	 */
 
 	//MS2: COMMENT THIS LINE BEFORE START CODING==========
-	return (void*)-1 ;
+	//return (void*)-1 ;
 	//====================================================
 
 	//TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
+	if (numOfPages == 0) {
+		return segmentBreak;
+	}
+	uint32 available_size = (uint32)hardLimit - (uint32)segmentBreak;
+	uint32 available_pages = available_size / PAGE_SIZE;
+	uint32 size_added = (numOfPages * PAGE_SIZE);
+
+	void* return_address = segmentBreak;
+
+	//cprintf("number of available pages: %d\n",available_pages);
+	//check if number of pages needed exceeds number of pages available
+	if (available_pages < numOfPages) {
+		return (void *) -1;
+	}
+	//cprintf("position of previous segment break: %p\n",segmentBreak);
+	segmentBreak = (uint32*)((char*)segmentBreak + size_added);
+
+	void* currentAddress = return_address;
+	void* givenRange = segmentBreak;
+	if (allocateMapFrame((uint32)currentAddress,(uint32)givenRange) == E_NO_MEM)
+	{
+		return (void *) -1;
+	}
+
+	//cprintf("size added : %d\n",size_added);
+	uint32* segmentBreak_in_uint32 = (uint32*)segmentBreak;
+	uint32* new_end_block = segmentBreak_in_uint32 - 1;
+	//cprintf("position of the new end block %p\n",new_end_block);
+	//cprintf("position of present segment break: %p\n",segmentBreak);
+	*new_end_block = 1;
+
+	set_block_data(return_address,size_added,1);
+	//cprintf("size of return address : %d\n",get_block_size(return_address));
+	free_block(return_address);
+	return return_address;
 	// Write your code here, remove the panic and write your code
-	panic("sbrk() is not implemented yet...!!");
 }
-
 //TODO: [PROJECT'24.MS2 - BONUS#2] [1] KERNEL HEAP - Fast Page Allocator
-
-void* kmalloc(unsigned int size)
-{
-	//TODO: [PROJECT'24.MS2 - #03] [1] KERNEL HEAP - kmalloc
-	// Write your code here, remove the panic and write your code
-	kpanic_into_prompt("kmalloc() is not implemented yet...!!");
-
-	// use "isKHeapPlacementStrategyFIRSTFIT() ..." functions to check the current strategy
-
+void* kmalloc(unsigned int size){
+	 if(size<=DYN_ALLOC_MAX_BLOCK_SIZE){
+			return alloc_block_FF(size);
+		}
+//	 	cprintf("%d",isKHeapPlacementStrategyFIRSTFIT());
+	    size = ROUNDUP(size,PAGE_SIZE);
+	    uint32 pagesNumber = size/PAGE_SIZE;
+	    int startIndex = -1,tempSize=0;
+	    bool checkSegment = 0;
+	    for(int i =0; i < 32766;i++){
+	    	checkSegment|=pageStatus[i];
+	    	if(checkSegment == 0){
+	    		if(startIndex==-1)
+	    			startIndex = i;
+	    		tempSize++;
+	    		if(tempSize>=pagesNumber ){
+	    			uint32 actualIndx = startIndex*PAGE_SIZE;
+	    			void* va = (uint32*)((char*)hardLimit + PAGE_SIZE);
+	    			va = (uint32*)((char*)va+actualIndx);
+	    			if (allocateMapFrame((uint32) va,(uint32)((char*)va+size)) == E_NO_MEM)
+					{
+						return NULL;
+					}
+	    			updatePage(startIndex,pagesNumber);
+	    		    return va;
+	    		}
+	    	}else{
+	    		tempSize = 0;
+	    		startIndex = -1;
+	    		checkSegment = 0;
+	    	}
+	    }
+	    return NULL;
 }
 
 void kfree(void* virtual_address)
@@ -173,3 +214,39 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	return NULL;
 	panic("krealloc() is not implemented yet...!!");
 }
+
+/********************Helper Functions***************************/
+
+int allocateMapFrame(uint32 currentAddress , uint32 limit){
+	int x =0;
+    while (currentAddress < limit)
+    {
+    	// Allocation of frames in memory.
+    	struct FrameInfo*  frame = NULL;
+    	int allocateResult = allocate_frame(&frame);
+    	if (allocateResult == E_NO_MEM)
+    	{
+            panic("No physical memory available to allocate frame.");  // No memory.
+    	}
+
+    	// Mapping of frames.
+    	allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_WRITEABLE);
+    	if (allocateResult == E_NO_MEM)
+    	{
+            free_frame(frame);
+            return E_NO_MEM;
+    	}
+    	currentAddress += PAGE_SIZE;
+    }
+    return 0;
+}
+
+void updatePage(int index,int size){
+	for(int i = index; i < index+size;i++){
+		pageStatus[i] = !pageStatus[i];
+	}
+}
+
+
+
+
