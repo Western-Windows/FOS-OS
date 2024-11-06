@@ -35,6 +35,7 @@ void* kmalloc(unsigned int size);
 void kfree(void* virtual_address);
 void *krealloc(void *virtual_address, unsigned int new_size);
 int allocateMapFrame(uint32 currentAddress , uint32 limit);
+void updatePage(int index,int size);
 unsigned int kheap_virtual_address(unsigned int physical_address);
 unsigned int kheap_physical_address(unsigned int virtual_address);
 bool pageStatus [32767];

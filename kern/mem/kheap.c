@@ -139,7 +139,7 @@ void kfree(void* virtual_address)
 	//refer to the project presentation and documentation for details
 
 	uint32 va = (uint32) virtual_address;
-
+	uint32 vaRoundDown = ROUNDDOWN(va,PAGE_SIZE);
 	// Block Range
 	if (va>KERNEL_HEAP_START && va< (uint32)hardLimit)//HARD_LIMIT should be declared in initialize
 	{
@@ -148,7 +148,7 @@ void kfree(void* virtual_address)
 	}
 
 	// Pages Range
-	else if(va>((uint32)hardLimit + PAGE_SIZE)&&va<KERNEL_HEAP_MAX)
+	else if(va>=((uint32)hardLimit + PAGE_SIZE)&&va<KERNEL_HEAP_MAX)
 	{
 		uint32 *ptr_page_table;
 		struct FrameInfo *free_frame = get_frame_info(ptr_page_directory, va, &ptr_page_table);
@@ -161,6 +161,9 @@ void kfree(void* virtual_address)
 
 		cprintf("unmapping frame..\n");
 		unmap_frame(ptr_page_directory, va);
+		uint32 freedVa = (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))/PAGE_SIZE;
+		cprintf("%d\n",freedVa);
+		pageStatus[freedVa]=0;
 	}
 
 	//Invalid address
