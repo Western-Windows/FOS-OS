@@ -104,7 +104,7 @@ void* kmalloc(unsigned int size){
 	    uint32 pagesNumber = size/PAGE_SIZE;
 	    int startIndex = -1,tempSize=0;
 	    int checkSegment = -1;
-	    for(int i =0; i < 32767;i++){
+	    for(int i =0; i < 32766;i++){
 	    	checkSegment&=pageStatus[i].startIndx;
 	    	if(checkSegment == -1){
 	    		if(startIndex==-1)
