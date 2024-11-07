@@ -104,13 +104,13 @@ void* kmalloc(unsigned int size){
 	    uint32 pagesNumber = size/PAGE_SIZE;
 	    int startIndex = -1,tempSize=0;
 	    int checkSegment = -1;
-	    for(int i =0; i < 32766;i++){
+	    for(int i =0; i < 32767;i++){
 	    	checkSegment&=pageStatus[i].startIndx;
 	    	if(checkSegment == -1){
 	    		if(startIndex==-1)
 	    			startIndex = i;
 	    		tempSize++;
-	    		if(tempSize>=pagesNumber ){
+	    		if(tempSize>=pagesNumber){
 	    			uint32 actualIndx = startIndex*PAGE_SIZE;
 	    			void* va = (uint32*)((char*)hardLimit + PAGE_SIZE);
 	    			va = (uint32*)((char*)va+actualIndx);
@@ -139,35 +139,40 @@ void kfree(void* virtual_address)
 
 	//you need to get the size of the given allocation using its address
 	//refer to the project presentation and documentation for details
-
 	uint32 va = (uint32) virtual_address;
-	uint32 vaRoundDown = ROUNDDOWN(va,PAGE_SIZE);
-	// Block Range
-	if (va>KERNEL_HEAP_START && va< (uint32)hardLimit)//HARD_LIMIT should be declared in initialize
+	if (va>=KERNEL_HEAP_START && va< (uint32)hardLimit)//HARD_LIMIT should be declared in initialize
 	{
 		cprintf("free block..\n");
-		free_block(&va);
+		free_block(virtual_address);
+		return;
 	}
+	uint32 vaRoundDown = ROUNDDOWN(va,PAGE_SIZE);
+	uint32 freedVa = (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))/PAGE_SIZE;
+	int startIndex = pageStatus[freedVa].startIndx;
+	int pages = pageStatus[freedVa].sizeOnAllocation;
+	cprintf("did u reach me?");
+	uint32 startVa = (uint32)((uint32)(((char*)hardLimit+PAGE_SIZE)) + (startIndex * PAGE_SIZE));
+	// Block Range
 
+	freePageStatus(startIndex,pages);
+	cprintf("start index = %d, no of pages = %d",startIndex,pages);
 	// Pages Range
-	else if(va>=((uint32)hardLimit + PAGE_SIZE)&&va<KERNEL_HEAP_MAX)
+	if(va>=((uint32)hardLimit + PAGE_SIZE)&&va<=KERNEL_HEAP_MAX)
 	{
-		uint32 *ptr_page_table;
-		struct FrameInfo *free_frame = get_frame_info(ptr_page_directory, va, &ptr_page_table);
 
-		if(free_frame == NULL) // Frame is free
-		{
-			cprintf("already free frame\n");
-			return;
+		for(int i = 0;i < pages;i++){
+			uint32 *ptr_page_table = NULL;
+			struct FrameInfo *free_frame = get_frame_info(ptr_page_directory, va, &ptr_page_table);
+
+			if(free_frame == NULL) // Frame is free
+			{
+				cprintf("already free frame\n");
+				return;
+			}
+//			cprintf("unmapping frame.., va = %x, index = %d,\n",va,i);
+			unmap_frame(ptr_page_directory, va);
+			va+=PAGE_SIZE;
 		}
-
-		cprintf("unmapping frame..\n");
-		unmap_frame(ptr_page_directory, va);
-		uint32 freedVa = (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))/PAGE_SIZE;
-		cprintf("%d\n",freedVa);
-		int startIndex = pageStatus[freedVa].startIndx;
-		int size = pageStatus[freedVa].sizeOnAllocation;
-		freePageStatus(startIndex,size);
 	}
 
 	//Invalid address
