@@ -36,6 +36,7 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 	}
 
     initialize_dynamic_allocator(daStart, initSizeToAllocate);
+    freePageStatus(0,32767);
     return 0;  // Successful initialization.
 }
 
@@ -102,10 +103,10 @@ void* kmalloc(unsigned int size){
 	    size = ROUNDUP(size,PAGE_SIZE);
 	    uint32 pagesNumber = size/PAGE_SIZE;
 	    int startIndex = -1,tempSize=0;
-	    bool checkSegment = 0;
+	    int checkSegment = -1;
 	    for(int i =0; i < 32766;i++){
-	    	checkSegment|=pageStatus[i];
-	    	if(checkSegment == 0){
+	    	checkSegment&=pageStatus[i].startIndx;
+	    	if(checkSegment == -1){
 	    		if(startIndex==-1)
 	    			startIndex = i;
 	    		tempSize++;
@@ -117,13 +118,14 @@ void* kmalloc(unsigned int size){
 					{
 						return NULL;
 					}
-	    			updatePage(startIndex,pagesNumber);
+	    			cprintf("%d",checkSegment);
+	    			allocatePage(startIndex,pagesNumber);
 	    		    return va;
 	    		}
 	    	}else{
 	    		tempSize = 0;
 	    		startIndex = -1;
-	    		checkSegment = 0;
+	    		checkSegment = -1;
 	    	}
 	    }
 	    return NULL;
@@ -163,7 +165,9 @@ void kfree(void* virtual_address)
 		unmap_frame(ptr_page_directory, va);
 		uint32 freedVa = (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))/PAGE_SIZE;
 		cprintf("%d\n",freedVa);
-		pageStatus[freedVa]=0;
+		int startIndex = pageStatus[freedVa].startIndx;
+		int size = pageStatus[freedVa].sizeOnAllocation;
+		freePageStatus(startIndex,size);
 	}
 
 	//Invalid address
@@ -244,12 +248,19 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit){
     return 0;
 }
 
-void updatePage(int index,int size){
+void allocatePage(int index,int size){
 	for(int i = index; i < index+size;i++){
-		pageStatus[i] = !pageStatus[i];
+		pageStatus[i].startIndx = index;
+		pageStatus[i].sizeOnAllocation = size;
 	}
 }
 
+void freePageStatus(int index,int size){
+	for(int i = index; i < index+size;i++){
+		pageStatus[i].startIndx = -1;
+		pageStatus[i].sizeOnAllocation = 0;
+	}
+}
 
 
 
