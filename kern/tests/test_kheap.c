@@ -1203,8 +1203,9 @@ int test_kfree_bestfirstfit()
 
 			freeFrames = sys_calculate_free_frames() ;
 			freeDiskFrames = pf_calculate_free_frames() ;
-			//kfree(ptr_allocations[3]);
-			free_block(ptr_allocations[3]);
+			blocks(freeBlocksList);
+			kfree(ptr_allocations[3]);
+			//free_block(ptr_allocations[3]);
 			if ((freeDiskFrames - pf_calculate_free_frames()) != 0) { correct = 0; cprintf("5.7 Page file is changed while it's not expected to. (pages are wrongly allocated/de-allocated in PageFile)\n"); }
 			if ((sys_calculate_free_frames() - freeFrames) != 0) { correct = 0; cprintf("5.7 Wrong free: freeing a block from the dynamic allocator should not affect the free frames\n"); }
 		}

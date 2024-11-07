@@ -143,7 +143,7 @@ void kfree(void* virtual_address)
 	if (va>=KERNEL_HEAP_START && va< (uint32)hardLimit)//HARD_LIMIT should be declared in initialize
 	{
 		cprintf("free block..\n");
-		free_block(virtual_address);
+		free_block((void*)va);
 		return;
 	}
 	uint32 vaRoundDown = ROUNDDOWN(va,PAGE_SIZE);

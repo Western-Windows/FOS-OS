@@ -439,7 +439,6 @@ void free_block(void *va)
 	{
 		return;
 	}
-
 	// Insert block into list (sorted)
 	struct BlockElement* free_block = (struct BlockElement*) va;
 
@@ -468,7 +467,7 @@ void free_block(void *va)
 	uint32 new_size;
 	struct BlockElement* prev =  LIST_PREV(free_block);
 	struct BlockElement* next =  LIST_NEXT(free_block);
-//		cprintf("prev1%x\n",prev);
+		cprintf("prev1%x\n",prev);
 //		cprintf("prev2%x\n",prev);
 	// Case: Merge with left and right blocks
 	if (prev_empty && next_empty)
@@ -652,7 +651,7 @@ void list_insertion_sort(struct BlockElement* free_block)
 	}
 	if(LIST_EMPTY(&freeBlocksList)) // Empty list
 	{
-//		cprintf("%x at head\n", free_block);
+		cprintf("%x at head\n", free_block);
 		LIST_INSERT_HEAD(&freeBlocksList, free_block);
 		return;
 	}
@@ -663,19 +662,19 @@ void list_insertion_sort(struct BlockElement* free_block)
 		// Check Head
 		if (current_block == LIST_FIRST(&freeBlocksList))
 		{
+//			cprintf("we want our parks in peace %u\n",LIST_SIZE(&freeBlocksList));
 
 			if (free_block < current_block) // If block is smaller than head, block becomes head
 			{
-//				cprintf("we want our parks in peace %u\n",LIST_SIZE(&freeBlocksList));
 //				cprintf("%x at head\n", free_block);
 				LIST_INSERT_BEFORE(&freeBlocksList, current_block, free_block);
 				gg=1;
 				break;
 			}
-			continue; // Else skip the head (to avoid NULL pointers in the checks)
+			//continue; // Else skip the head (to avoid NULL pointers in the checks)
 		}
 		// Check Tail
-		else if (current_block == LIST_LAST(&freeBlocksList)) // If block is greater than tail, block becomes tail
+		 if (current_block == LIST_LAST(&freeBlocksList)) // If block is greater than tail, block becomes tail
 		{
 			if (free_block > current_block)
 			{
@@ -686,14 +685,12 @@ void list_insertion_sort(struct BlockElement* free_block)
 			}
 			continue; // Else skip the tail (to avoid NULL pointers in the checks)
 		}
-		else if (free_block == current_block) // If block already exists
+		 if (free_block == current_block) // If block already exists
 		{
 			gg=1;
 			break;
 		}
-		else
-		{
-			// If block should be before current block
+		// If block should be before current block
 			if (free_block < current_block && free_block > LIST_PREV(current_block))
 			{
 //				cprintf("%x before %x \n", free_block, current_block);
@@ -702,16 +699,16 @@ void list_insertion_sort(struct BlockElement* free_block)
 				break;
 			}
 			// If block should be after current block
-			else if(free_block > current_block && free_block < LIST_NEXT(current_block))
+			if(free_block > current_block && free_block < LIST_NEXT(current_block))
 			{
 //				cprintf("%x after %x \n", free_block, current_block);
 				LIST_INSERT_AFTER(&freeBlocksList, current_block, free_block);
 				gg=1;
 				break;
 			}
-		}
 	}
 	if(!gg){
+//		cprintf("Ff");
 		LIST_INSERT_TAIL(&freeBlocksList,free_block);
 	}
 
