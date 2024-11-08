@@ -3,19 +3,22 @@
 #include <inc/memlayout.h>
 #include <inc/dynamic_allocator.h>
 #include "memory_manager.h"
-
 //Initialize the dynamic allocator of kernel heap with the given start address, size & limit
 //All pages in the given range should be allocated
 //Remember: call the initialize_dynamic_allocator(..) to complete the initialization
 //Return:
 //	On success: 0
 //	Otherwise (if no memory OR initial size exceed the given limit): PANIC
+#define heap_frames ( KERNEL_HEAP_MAX - KERNEL_HEAP_START) / PAGE_SIZE
+#define FRAME_NUMBER(physical_address) ((physical_address) / PAGE_SIZE)
+int phys_to_virt[heap_frames];
+
 int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate, uint32 daLimit)
 {
 	//TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - initialize_kheap_dynamic_allocator
 	// Write your code here, remove the panic and write your code
 	//panic("initialize_kheap_dynamic_allocator() is not implemented yet...!!");
-
+	init();
 	start = (uint32*) daStart;  // Dynamic allocation start address.
 	segmentBreak = (uint32*)(daStart + initSizeToAllocate);  // Current Break.
 	hardLimit = (uint32*) daLimit;  // The start of the unusable memory.
@@ -172,6 +175,7 @@ void kfree(void* virtual_address)
 //			cprintf("unmapping frame.., va = %x, index = %d,\n",va,i);
 			unmap_frame(ptr_page_directory, va);
 			va+=PAGE_SIZE;
+	    	phys_to_virt[FRAME_NUMBER(to_physical_address(free_frame))] = -1;
 		}
 	}
 
@@ -187,24 +191,35 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 {
 	//TODO: [PROJECT'24.MS2 - #05] [1] KERNEL HEAP - kheap_physical_address
 	// Write your code here, remove the panic and write your code
-	panic("kheap_physical_address() is not implemented yet...!!");
+	//panic("kheap_physical_address() is not implemented yet...!!");
 
 	//return the physical address corresponding to given virtual_address
 	//refer to the project presentation and documentation for details
 
 	//EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED ==================
+
+	uint32 *temp = NULL;
+	struct FrameInfo *ans = get_frame_info(ptr_page_directory, virtual_address, &temp);
+	if (ans == NULL) return 0;
+	uint32 pg = to_physical_address(ans);
+	uint32 off = virtual_address & 0xFFF;
+	return pg | off;
 }
 
 unsigned int kheap_virtual_address(unsigned int physical_address)
 {
 	//TODO: [PROJECT'24.MS2 - #06] [1] KERNEL HEAP - kheap_virtual_address
 	// Write your code here, remove the panic and write your code
-	panic("kheap_virtual_address() is not implemented yet...!!");
+	//panic("kheap_virtual_address() is not implemented yet...!!");
 
 	//return the virtual address corresponding to given physical_address
 	//refer to the project presentation and documentation for details
 
 	//EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED ==================
+
+	if ( phys_to_virt[FRAME_NUMBER(physical_address)] == -1) return 0;
+	uint32 off = physical_address & 0xFFF;
+	return phys_to_virt[FRAME_NUMBER(physical_address)] + off;
 }
 //=================================================================================//
 //============================== BONUS FUNCTION ===================================//
@@ -240,7 +255,8 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit){
     	{
             panic("No physical memory available to allocate frame.");  // No memory.
     	}
-
+    	uint32 phys_frame = to_physical_address(frame);
+    	phys_to_virt[FRAME_NUMBER(phys_frame)] = currentAddress;
     	// Mapping of frames.
     	allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_WRITEABLE);
     	if (allocateResult == E_NO_MEM)
@@ -267,5 +283,10 @@ void freePageStatus(int index,int size){
 	}
 }
 
+void init(){
+	for(int i = 0; i < heap_frames;i++){
+		phys_to_virt[i] = -1;
+	}
+}
 
 

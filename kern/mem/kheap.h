@@ -47,6 +47,7 @@ int numOfKheapVACalls ;
 void* start;
 void* segmentBreak;
 void* hardLimit;
+void init();
 struct PageInfo{
 	int startIndx;
 	int sizeOnAllocation;
