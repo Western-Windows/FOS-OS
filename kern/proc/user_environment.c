@@ -913,7 +913,7 @@ void initialize_uheap_dynamic_allocator(struct Env* e, uint32 daStart, uint32 da
 	//	2) call the initialize_dynamic_allocator(..) to complete the initialization
 	//panic("initialize_uheap_dynamic_allocator() is not implemented yet...!!");
 
-	uint32 initSizeToAllocate = 2*sizeof(uint32);
+	uint32 initSizeToAllocate = 0;
 	e->start = (uint32*) daStart;  // Dynamic allocation start address.
 	e->segmentBreak = (uint32*)(daStart + initSizeToAllocate);  // Current Break.
 	e->hardLimit = (uint32*) daLimit;  // The start of the unusable memory.
