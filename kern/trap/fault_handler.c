@@ -151,6 +151,26 @@ void fault_handler(struct Trapframe *tf)
 			//TODO: [PROJECT'24.MS2 - #08] [2] FAULT HANDLER I - Check for invalid pointers
 			//(e.g. pointing to unmarked user heap page, kernel or wrong access rights),
 			//your code is here
+            uint32 permissions = pt_get_page_permissions(faulted_env->env_page_directory, fault_va);
+            if (fault_va > USER_HEAP_START && fault_va < USER_HEAP_MAX){
+            	if ((permissions & (PERM_AVAILABLE)) == 0){
+            		//cprintf("pointing to unmarked page\n");
+            		env_exit();
+            	}
+            }
+            if ((permissions & (PERM_USER)) == 0){
+                //cprintf("pointing to kernel\n");
+                 env_exit();
+            }
+            if ((permissions & (PERM_PRESENT)) == 0){
+                //cprintf("doesn't exist\n");
+                env_exit();
+            }
+            if ((permissions & (PERM_WRITEABLE)) == 0){
+                //cprintf("doesn't exist\n");
+                env_exit();
+            }
+
 
 			/*============================================================================================*/
 		}
@@ -227,9 +247,35 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 		//cprintf("PLACEMENT=========================WS Size = %d\n", wsSize );
 		//TODO: [PROJECT'24.MS2 - #09] [2] FAULT HANDLER I - Placement
 		// Write your code here, remove the panic and write your code
-		panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
-
+		//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
 		//refer to the project presentation and documentation for details
+		uint32 *ptr_table = NULL;
+		struct FrameInfo* frame = get_frame_info(faulted_env->env_page_directory, fault_va, &ptr_table);
+		int check = allocate_frame(&frame);
+		if (check != E_NO_MEM){
+			check = map_frame(faulted_env->env_page_directory, frame, fault_va, PERM_USER|PERM_WRITEABLE|PERM_PRESENT);
+			if (check != E_NO_MEM){
+				check = pf_read_env_page(faulted_env, (void*)fault_va);
+				if (check == E_PAGE_NOT_EXIST_IN_PF){
+					if (fault_va > USER_HEAP_START && fault_va < USER_HEAP_MAX){/*Valid address inside heap*/}
+					else if (fault_va < USTACKTOP && fault_va >= USTACKBOTTOM){/*Valid address inside stack*/}
+					else if(fault_va != 0){}
+					else{
+						env_exit();
+					}
+				}
+				struct WorkingSetElement* new_WS = env_page_ws_list_create_element(faulted_env, fault_va);
+				if (new_WS != NULL){
+					LIST_INSERT_TAIL(&(faulted_env->page_WS_list), new_WS);
+					if (faulted_env->page_WS_max_size == LIST_SIZE(&(faulted_env->page_WS_list))){
+						faulted_env->page_last_WS_element = LIST_FIRST(&(faulted_env->page_WS_list));
+					}
+					else{
+						faulted_env->page_last_WS_element = NULL;
+					}
+				}
+			}
+		}
 	}
 	else
 	{

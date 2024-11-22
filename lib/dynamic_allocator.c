@@ -291,7 +291,7 @@ void *alloc_block_FF(uint32 size)
 			it = LIST_LAST(&freeBlocksList);
 			freeBlockSize = get_block_size(it);
 		}
-		cprintf("free : %d\nneeded : %d\n",freeBlockSize,totalRequiredSize);
+
 		// External fragmentation "too large".
 		if ((freeBlockSize - totalRequiredSize) >= 16)
 		{
@@ -651,7 +651,6 @@ void list_insertion_sort(struct BlockElement* free_block)
 	}
 	if(LIST_EMPTY(&freeBlocksList)) // Empty list
 	{
-		cprintf("%x at head\n", free_block);
 		LIST_INSERT_HEAD(&freeBlocksList, free_block);
 		return;
 	}

@@ -11,7 +11,9 @@
 //	Otherwise (if no memory OR initial size exceed the given limit): PANIC
 #define heap_frames ( KERNEL_HEAP_MAX - KERNEL_HEAP_START) / PAGE_SIZE
 #define FRAME_NUMBER(physical_address) ((physical_address) / PAGE_SIZE)
-int phys_to_virt[heap_frames];
+#define RAM_SIZE 0x100000000
+#define TOTAL_FRAMES (RAM_SIZE / PAGE_SIZE)
+int phys_to_virt[TOTAL_FRAMES];
 
 int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate, uint32 daLimit)
 {
@@ -68,13 +70,10 @@ void* sbrk(int numOfPages)
 	uint32 size_added = (numOfPages * PAGE_SIZE);
 
 	void* return_address = segmentBreak;
-
-	//cprintf("number of available pages: %d\n",available_pages);
 	//check if number of pages needed exceeds number of pages available
 	if (available_pages < numOfPages) {
 		return (void *) -1;
 	}
-	//cprintf("position of previous segment break: %p\n",segmentBreak);
 	segmentBreak = (uint32*)((char*)segmentBreak + size_added);
 
 	void* currentAddress = return_address;
@@ -83,16 +82,11 @@ void* sbrk(int numOfPages)
 	{
 		return (void *) -1;
 	}
-
-	//cprintf("size added : %d\n",size_added);
 	uint32* segmentBreak_in_uint32 = (uint32*)segmentBreak;
 	uint32* new_end_block = segmentBreak_in_uint32 - 1;
-	//cprintf("position of the new end block %p\n",new_end_block);
-	//cprintf("position of present segment break: %p\n",segmentBreak);
 	*new_end_block = 1;
 
 	set_block_data(return_address,size_added,1);
-	//cprintf("size of return address : %d\n",get_block_size(return_address));
 	free_block(return_address);
 	return return_address;
 	// Write your code here, remove the panic and write your code
@@ -121,7 +115,6 @@ void* kmalloc(unsigned int size){
 					{
 						return NULL;
 					}
-	    			cprintf("%d",checkSegment);
 	    			allocatePage(startIndex,pagesNumber);
 	    		    return va;
 	    		}
@@ -145,7 +138,6 @@ void kfree(void* virtual_address)
 	uint32 va = (uint32) virtual_address;
 	if (va>=KERNEL_HEAP_START && va< (uint32)hardLimit)//HARD_LIMIT should be declared in initialize
 	{
-		cprintf("free block..\n");
 		free_block((void*)va);
 		return;
 	}
@@ -153,12 +145,10 @@ void kfree(void* virtual_address)
 	uint32 freedVa = (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))/PAGE_SIZE;
 	int startIndex = pageStatus[freedVa].startIndx;
 	int pages = pageStatus[freedVa].sizeOnAllocation;
-	cprintf("did u reach me?");
 	uint32 startVa = (uint32)((uint32)(((char*)hardLimit+PAGE_SIZE)) + (startIndex * PAGE_SIZE));
 	// Block Range
 
 	freePageStatus(startIndex,pages);
-	cprintf("start index = %d, no of pages = %d",startIndex,pages);
 	// Pages Range
 	if(va>=((uint32)hardLimit + PAGE_SIZE)&&va<=KERNEL_HEAP_MAX)
 	{
@@ -169,10 +159,8 @@ void kfree(void* virtual_address)
 
 			if(free_frame == NULL) // Frame is free
 			{
-				cprintf("already free frame\n");
 				return;
 			}
-//			cprintf("unmapping frame.., va = %x, index = %d,\n",va,i);
 			unmap_frame(ptr_page_directory, va);
 			va+=PAGE_SIZE;
 	    	phys_to_virt[FRAME_NUMBER(to_physical_address(free_frame))] = -1;
@@ -284,7 +272,7 @@ void freePageStatus(int index,int size){
 }
 
 void init(){
-	for(int i = 0; i < heap_frames;i++){
+	for(int i = 0; i < TOTAL_FRAMES;i++){
 		phys_to_virt[i] = -1;
 	}
 }
