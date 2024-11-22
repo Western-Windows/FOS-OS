@@ -69,7 +69,8 @@ void test_initialize_dynamic_allocator()
 	*tmp_ptr = -1 ;
 	*(tmp_ptr+1) = 1 ;
 
-	uint32 initAllocatedSpace = 2*Mega;
+	//uint32 initAllocatedSpace = 2*Mega;
+	uint32 initAllocatedSpace = 2*sizeof(uint32);
 	initialize_dynamic_allocator(KERNEL_HEAP_START, initAllocatedSpace);
 
 
