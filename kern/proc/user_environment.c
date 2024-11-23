@@ -874,7 +874,7 @@ void* create_user_kern_stack(uint32* ptr_user_page_directory)
 	//On failure: panic
 
     uint32 *va = kmalloc(KERNEL_STACK_SIZE);
-    if (va == NULL){
+    if (va == NULL || ptr_user_page_directory == NULL){
         panic("Failed to create user stack");
     }
     else{
