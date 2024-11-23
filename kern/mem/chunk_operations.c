@@ -162,7 +162,6 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	//panic("allocate_user_mem() is not implemented yet...!!");
 
 	uint32 startOfRange = virtual_address;
-	uint32 endOfRange = startOfRange + size;
 
 	size = ROUNDUP(size, PAGE_SIZE); // Handles multiples of 4, and internal fragmentations.
 	int pagesNumber = size/PAGE_SIZE; // Number of pages in given range.
@@ -171,13 +170,12 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 
 	for (int pageNo = 0 ; pageNo < pagesNumber ; pageNo ++)
 	{
-		int dirIndx = PDX(addressOfPage);
 		int tableIndx = PTX(addressOfPage);
 		uint32 *ptr_page_table = NULL;
 
 		get_page_table(e->env_page_directory, addressOfPage, 1, &ptr_page_table);
-		uint32 entry = ptr_page_table[tableIndx];
-		entry |= (PERM_AVAILABLE); // Marks page.
+		ptr_page_table[tableIndx] |= (PERM_AVAILABLE); // Marks page.
+
 		addressOfPage = addressOfPage + PAGE_SIZE;
 	}
 }
