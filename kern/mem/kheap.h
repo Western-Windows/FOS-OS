@@ -47,10 +47,7 @@ int numOfKheapVACalls ;
 void* start;
 void* segmentBreak;
 void* hardLimit;
+uint32 statusLimit;
 void init();
-struct PageInfo{
-	int startIndx;
-	int sizeOnAllocation;
-} pageStatus [32767];
 
 #endif // FOS_KERN_KHEAP_H_

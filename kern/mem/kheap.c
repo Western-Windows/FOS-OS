@@ -14,7 +14,7 @@
 #define RAM_SIZE 0x100000000
 #define TOTAL_FRAMES (RAM_SIZE / PAGE_SIZE)
 int phys_to_virt[TOTAL_FRAMES];
-
+int pageStatus[32766];
 int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate, uint32 daLimit)
 {
 	//TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - initialize_kheap_dynamic_allocator
@@ -24,7 +24,7 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 	start = (uint32*) daStart;  // Dynamic allocation start address.
 	segmentBreak = (uint32*)(daStart + initSizeToAllocate);  // Current Break.
 	hardLimit = (uint32*) daLimit;  // The start of the unusable memory.
-
+	statusLimit = ((KERNEL_HEAP_MAX - (daLimit+PAGE_SIZE))/PAGE_SIZE);
 	uint32 maxRange = daLimit - daStart;  // Maximum size to allocate.
 
     if (initSizeToAllocate > maxRange)
@@ -93,39 +93,44 @@ void* sbrk(int numOfPages)
 }
 //TODO: [PROJECT'24.MS2 - BONUS#2] [1] KERNEL HEAP - Fast Page Allocator
 void* kmalloc(unsigned int size){
-	 if(size<=DYN_ALLOC_MAX_BLOCK_SIZE){
-			return alloc_block_FF(size);
-		}
-//	 	cprintf("%d",isKHeapPlacementStrategyFIRSTFIT());
-	    size = ROUNDUP(size,PAGE_SIZE);
-	    uint32 pagesNumber = size/PAGE_SIZE;
-	    int startIndex = -1,tempSize=0;
-	    int checkSegment = -1;
-	    for(int i =0; i < 32766;i++){
-	    	checkSegment&=pageStatus[i].startIndx;
-	    	if(checkSegment == -1){
-	    		if(startIndex==-1)
-	    			startIndex = i;
-	    		tempSize++;
-	    		if(tempSize>=pagesNumber){
-	    			uint32 actualIndx = startIndex*PAGE_SIZE;
-	    			void* va = (uint32*)((char*)hardLimit + PAGE_SIZE);
-	    			va = (uint32*)((char*)va+actualIndx);
-	    			if (allocateMapFrame((uint32) va,(uint32)((char*)va+size)) == E_NO_MEM)
-					{
+//	if(isKHeapPlacementStrategyFIRSTFIT() == 0){
+//		setKHeapPlacementStrategyFIRSTFIT();
+//	}
+	if(size > DYN_ALLOC_MAX_BLOCK_SIZE){
+		uint32 required_pages = ROUNDUP(size,PAGE_SIZE)>>12;
+		int start=-1,temp = 0;
+		for(int i = 0; i < statusLimit;i++){
+			if(~pageStatus[i]){
+				if(~start){
+					start = -1;
+					temp = 0;
+				}
+				do{
+					i+=(pageStatus[i]);
+				}while(~pageStatus[i]);
+
+			}
+			if(pageStatus[i]==-1){
+				if(start==-1){
+					start = i;
+				}
+				temp++;
+				if(temp == required_pages){
+					uint32 va = ((uint32)hardLimit + PAGE_SIZE*(start+1));
+					if(allocateMapFrame(va,va+(PAGE_SIZE*required_pages)) == E_NO_MEM){
 						return NULL;
 					}
-	    			allocatePage(startIndex,pagesNumber);
-	    		    return va;
-	    		}
-	    	}else{
-	    		tempSize = 0;
-	    		startIndex = -1;
-	    		checkSegment = -1;
-	    	}
-	    }
-	    return NULL;
+					pageStatus[start] = required_pages;
+					return (void*)va;
+				}
+			}
+		}
+		return NULL;
+	}
+	else
+		return alloc_block_FF(size);
 }
+
 
 void kfree(void* virtual_address)
 {
@@ -142,13 +147,11 @@ void kfree(void* virtual_address)
 		return;
 	}
 	uint32 vaRoundDown = ROUNDDOWN(va,PAGE_SIZE);
-	uint32 freedVa = (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))/PAGE_SIZE;
-	int startIndex = pageStatus[freedVa].startIndx;
-	int pages = pageStatus[freedVa].sizeOnAllocation;
-	uint32 startVa = (uint32)((uint32)(((char*)hardLimit+PAGE_SIZE)) + (startIndex * PAGE_SIZE));
-	// Block Range
-
-	freePageStatus(startIndex,pages);
+	uint32 freedVa = (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))>>12;
+	int pages = pageStatus[freedVa];
+	uint32 startIndex = (va - ((uint32)((char*)hardLimit+PAGE_SIZE)))>>12;
+	pageStatus[startIndex] = -1;
+//	freePageStatus(startIndex,pages);
 	// Pages Range
 	if(va>=((uint32)hardLimit + PAGE_SIZE)&&va<=KERNEL_HEAP_MAX)
 	{
@@ -233,16 +236,11 @@ void *krealloc(void *virtual_address, uint32 new_size)
 /********************Helper Functions***************************/
 
 int allocateMapFrame(uint32 currentAddress , uint32 limit){
-	int x =0;
     while (currentAddress < limit)
     {
     	// Allocation of frames in memory.
     	struct FrameInfo*  frame = NULL;
     	int allocateResult = allocate_frame(&frame);
-    	if (allocateResult == E_NO_MEM)
-    	{
-            panic("No physical memory available to allocate frame.");  // No memory.
-    	}
     	uint32 phys_frame = to_physical_address(frame);
     	phys_to_virt[FRAME_NUMBER(phys_frame)] = currentAddress;
     	// Mapping of frames.
@@ -259,15 +257,13 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit){
 
 void allocatePage(int index,int size){
 	for(int i = index; i < index+size;i++){
-		pageStatus[i].startIndx = index;
-		pageStatus[i].sizeOnAllocation = size;
+		pageStatus[i]= size;
 	}
 }
 
 void freePageStatus(int index,int size){
 	for(int i = index; i < index+size;i++){
-		pageStatus[i].startIndx = -1;
-		pageStatus[i].sizeOnAllocation = 0;
+		pageStatus[i] = -1;
 	}
 }
 
