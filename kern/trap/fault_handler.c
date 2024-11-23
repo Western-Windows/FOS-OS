@@ -152,22 +152,19 @@ void fault_handler(struct Trapframe *tf)
 			//(e.g. pointing to unmarked user heap page, kernel or wrong access rights),
 			//your code is here
             uint32 permissions = pt_get_page_permissions(faulted_env->env_page_directory, fault_va);
-            if (fault_va > USER_HEAP_START && fault_va < USER_HEAP_MAX){
-            	if ((permissions & (PERM_AVAILABLE)) == 0){
-            		//cprintf("pointing to unmarked page\n");
+            if (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX){
+            	if ((permissions & (PERM_PRESENT)) == 0 && (permissions & (PERM_AVAILABLE)) == 0){
+            		cprintf("pointing to unmarked page\n");
             		env_exit();
             	}
             }
             if ((permissions & (PERM_USER)) == 0){
-                //cprintf("pointing to kernel\n");
+                 cprintf("pointing to kernel\n");
                  env_exit();
             }
-            if ((permissions & (PERM_PRESENT)) == 0){
-                //cprintf("doesn't exist\n");
-                env_exit();
-            }
-            if ((permissions & (PERM_WRITEABLE)) == 0){
-                //cprintf("doesn't exist\n");
+
+            if ((permissions & (PERM_PRESENT)) && (permissions & (PERM_WRITEABLE)) == 0){
+                cprintf("doesn't exist\n");
                 env_exit();
             }
 
