@@ -17,5 +17,7 @@ void free(void* virtual_address);
 void sfree(void* virtual_address);
 void *realloc(void *virtual_address, uint32 new_size);
 bool is_marked(void* va);
+void mark_pages_arr(void* va, int pages);
+void unmark_pages_arr(void* va, int pages);
 
 #endif
