@@ -12,6 +12,7 @@ int firstTimeSleepLock = 1;
 /*2023*/
 void* sbrk(int increment)
 {
+	cprintf("Sys Sbrk\n");
 	return (void*) sys_sbrk(increment);
 }
 
@@ -38,14 +39,16 @@ void* malloc(uint32 size)
 	// Dynamic Allocator
 	if (size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
-		if (sys_isUHeapPlacementStrategyFIRSTFIT() == 1) // First Fit
-		{
-			va= alloc_block_FF(size);
-		}
-		else if (sys_isUHeapPlacementStrategyBESTFIT() == 1) // Best Fit
-		{
-			va= alloc_block_BF(size);
-		}
+//		if (sys_isUHeapPlacementStrategyFIRSTFIT() == 1) // First Fit
+//		{
+//			va= alloc_block_FF(size);
+//		}
+//		else if (sys_isUHeapPlacementStrategyBESTFIT() == 1) // Best Fit
+//		{
+//			va= alloc_block_BF(size);
+//		}
+		cprintf("Block Alloc\n");
+		va= alloc_block_FF(size);
 		return va;
 	}
 	// Page Allocator
@@ -248,7 +251,7 @@ void mark_pages_arr(void* va, int pages)
 	int pages_size = pages;
 	while(pages--)
 	{
-		uint32 page_index = ((uint32)va - USER_HEAP_START)>>12;
+		uint32 page_index = (virtualAddress - USER_HEAP_START)>>12;
 		user_pages[page_index]= pages_size;
 		virtualAddress += PAGE_SIZE;
 	}
@@ -259,7 +262,7 @@ void unmark_pages_arr(void* va, int pages)
 	uint32 virtualAddress = (uint32)va;
 	while(pages--)
 	{
-		uint32 page_index = ((uint32)va - USER_HEAP_START)>>12;
+		uint32 page_index = (virtualAddress - USER_HEAP_START)>>12;
 		user_pages[page_index]= 0;
 		virtualAddress += PAGE_SIZE;
 	}
