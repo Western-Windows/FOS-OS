@@ -153,13 +153,37 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 {
 	/*====================================*/
 	/*Remove this line before start coding*/
-//	inctst();
-//	return;
+	//inctst();
+	//return;
 	/*====================================*/
 
 	//TODO: [PROJECT'24.MS2 - #13] [3] USER HEAP [KERNEL SIDE] - allocate_user_mem()
 	// Write your code here, remove the panic and write your code
-	panic("allocate_user_mem() is not implemented yet...!!");
+	//panic("allocate_user_mem() is not implemented yet...!!");
+
+	uint32 startOfRange = virtual_address;
+
+	size = ROUNDUP(size, PAGE_SIZE); // Handles multiples of 4, and internal fragmentations.
+	int pagesNumber = size/PAGE_SIZE; // Number of pages in given range.
+
+	uint32 addressOfPage = startOfRange;
+
+	for (int pageNo = 0 ; pageNo < pagesNumber ; pageNo ++)
+	{
+		int tableIndx = PTX(addressOfPage);
+		uint32 *ptr_page_table = NULL;
+
+		get_page_table(e->env_page_directory, addressOfPage, &ptr_page_table);
+
+		if(ptr_page_table == NULL)
+		{
+			create_page_table(e->env_page_directory, addressOfPage);
+			get_page_table(e->env_page_directory, addressOfPage, &ptr_page_table);
+		}
+		ptr_page_table[tableIndx] |= (PERM_AVAILABLE); // Marks page.
+
+		addressOfPage += PAGE_SIZE;
+	}
 }
 
 //=====================================
@@ -169,8 +193,8 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 {
 	/*====================================*/
 	/*Remove this line before start coding*/
-//	inctst();
-//	return;
+	//inctst();
+	//return;
 	/*====================================*/
 
 	//TODO: [PROJECT'24.MS2 - #15] [3] USER HEAP [KERNEL SIDE] - free_user_mem
