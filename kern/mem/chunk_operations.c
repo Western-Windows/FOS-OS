@@ -173,10 +173,16 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 		int tableIndx = PTX(addressOfPage);
 		uint32 *ptr_page_table = NULL;
 
-		get_page_table(e->env_page_directory, addressOfPage, 1, &ptr_page_table);
+		get_page_table(e->env_page_directory, addressOfPage, &ptr_page_table);
+
+		if(ptr_page_table == NULL)
+		{
+			create_page_table(e->env_page_directory, addressOfPage);
+			get_page_table(e->env_page_directory, addressOfPage, &ptr_page_table);
+		}
 		ptr_page_table[tableIndx] |= (PERM_AVAILABLE); // Marks page.
 
-		addressOfPage = addressOfPage + PAGE_SIZE;
+		addressOfPage += PAGE_SIZE;
 	}
 }
 
