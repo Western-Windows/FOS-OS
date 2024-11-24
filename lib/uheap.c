@@ -1,5 +1,9 @@
 #include <inc/lib.h>
 
+int user_pages[NUM_OF_UHEAP_PAGES];
+int firstTimeSleepLock = 1;
+struct sleeplock user_pages_lck;
+
 //==================================================================================//
 //============================ REQUIRED FUNCTIONS ==================================//
 //==================================================================================//
@@ -24,11 +28,74 @@ void* malloc(uint32 size)
 	//==============================================================
 	//TODO: [PROJECT'24.MS2 - #12] [3] USER HEAP [USER SIDE] - malloc()
 	// Write your code here, remove the panic and write your code
-	panic("malloc() is not implemented yet...!!");
-	return NULL;
+	//panic("malloc() is not implemented yet...!!");
+	//return NULL;
 	//Use sys_isUHeapPlacementStrategyFIRSTFIT() and	sys_isUHeapPlacementStrategyBESTFIT()
 	//to check the current strategy
 
+	void* va;
+	bool found = 0;
+
+	// Dynamic Allocator
+	if (size <= DYN_ALLOC_MAX_BLOCK_SIZE)
+	{
+		if (sys_isUHeapPlacementStrategyFIRSTFIT() == 1) // First Fit
+		{
+			va= alloc_block_FF(size);
+		}
+		else if (sys_isUHeapPlacementStrategyBESTFIT() == 1) // Best Fit
+		{
+			va= alloc_block_BF(size);
+		}
+		return va;
+	}
+	// Page Allocator
+	else
+	{
+		uint32 required_pages = ROUNDUP(size,PAGE_SIZE)>>12;
+		uint32 start_va= (uint32)(((char*)myEnv->hardLimit)+ PAGE_SIZE);
+		int curr_pages=0;
+
+		// Sleep lock for User Pages
+		if (firstTimeSleepLock)
+		{
+			firstTimeSleepLock = 0;
+			init_sleeplock(&user_pages_lck, "User Pages Sleep Lock");
+		}
+		acquire_sleeplock(&user_pages_lck);
+
+		for (int i=start_va; i<= USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
+		{
+
+			if(is_marked((void*)i)==0) // Check if page is unmarked (can be used)
+			{
+				curr_pages++;
+			}
+			else // If marked, start over counting from next index
+			{
+				curr_pages=0;
+				start_va=i+PAGE_SIZE;
+			}
+
+			if (curr_pages == required_pages) // Found required consecutive pages
+			{
+				found =1;
+				va = start_va;
+				uint32 page_index = (va - USER_HEAP_START)>>12;
+				user_pages[page_index]= curr_pages;
+				sys_allocate_user_mem((uint32)va, required_pages*PAGE_SIZE);
+				break;
+			}
+		}
+
+		if (!found) // Required consecutive pages not found
+		{
+			va = NULL;
+		}
+
+		release_sleeplock(&user_pages_lck);
+		return va;
+	}
 }
 
 //=================================
@@ -38,7 +105,38 @@ void free(void* virtual_address)
 {
 	//TODO: [PROJECT'24.MS2 - #14] [3] USER HEAP [USER SIDE] - free()
 	// Write your code here, remove the panic and write your code
-	panic("free() is not implemented yet...!!");
+	//panic("free() is not implemented yet...!!");
+
+	uint32 va = (uint32) virtual_address;
+	uint32 u_hard_limit =(uint32)(((char*)myEnv->hardLimit)+ PAGE_SIZE);
+
+	// Block Range
+	if (va>=USER_HEAP_START && va< u_hard_limit)
+	{
+		cprintf("free user block..\n");
+		free_block((void*)va);
+		return;
+	}
+
+
+	uint32 vaRoundDown = ROUNDDOWN(va,PAGE_SIZE);
+	uint32 page_index = (vaRoundDown - USER_HEAP_START)>>12;
+	uint32 pages = user_pages[page_index];
+
+	// Pages Range
+	if(va>=u_hard_limit && va<=USER_HEAP_MAX)
+	{
+			cprintf("free user pages..\n");
+			sys_free_user_mem(va,pages*PAGE_SIZE);
+			return;
+	}
+
+	//Invalid address
+	else
+	{
+		panic("failed to free address %x, illegal address", va);
+		return;
+	}
 }
 
 
@@ -135,4 +233,14 @@ void freeHeap(void* virtual_address)
 {
 	panic("Not Implemented");
 
+}
+
+bool is_marked(void* va)
+{
+	int permission= pt_get_page_permissions(myEnv->env_page_directory, (uint32)va);
+
+	if (permission & (PERM_AVAILABLE)==1)
+		return 1;
+	else
+		return 0;
 }
