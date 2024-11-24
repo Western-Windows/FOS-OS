@@ -57,18 +57,16 @@ void* malloc(uint32 size)
 		uint32 start_va= (uint32)(((char*)myEnv->hardLimit)+ PAGE_SIZE);
 		int curr_pages=0;
 
-		for (uint32 i=start_va + PAGE_SIZE; i<= USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
+		for (uint32 i=start_va; i<= USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
 		{
 			cprintf("Loop %x\n", i);
 
 			if(is_marked((void*)i)==0) // Check if page is unmarked (can be used)
 			{
-				cprintf("isMarked\n");
 				curr_pages++;
 			}
 			else // If marked, start over counting from next index
 			{
-				cprintf("isMareked Else\n");
 				curr_pages=0;
 				start_va=i+PAGE_SIZE;
 			}
@@ -78,8 +76,7 @@ void* malloc(uint32 size)
 				found =1;
 				va = (void*)start_va;
 				uint32 page_index = (start_va - USER_HEAP_START)>>12;
-				user_pages[page_index]= curr_pages;
-				cprintf("before\n");
+				mark_pages_arr(va, required_pages);
 				sys_allocate_user_mem((uint32)va, required_pages*PAGE_SIZE);
 				cprintf("after\n");
 				break;
@@ -120,10 +117,11 @@ void free(void* virtual_address)
 	uint32 pages = user_pages[page_index];
 
 	// Pages Range
-	if(va>=u_hard_limit && va<=USER_HEAP_MAX)
+	if(vaRoundDown>=u_hard_limit && vaRoundDown<=USER_HEAP_MAX)
 	{
 			cprintf("free user pages..\n");
-			sys_free_user_mem(va,pages*PAGE_SIZE);
+			unmark_pages_arr(vaRoundDown, pages);
+			sys_free_user_mem(vaRoundDown, pages*PAGE_SIZE);
 			return;
 	}
 
@@ -233,13 +231,31 @@ void freeHeap(void* virtual_address)
 
 bool is_marked(void* va)
 {
-	cprintf("Marked Beginning\n");
-	uint32 virtual = (uint32)va;
-	uint32 dir_index = PDX(virtual);
-	int perm = myEnv->env_page_directory[dir_index] & (PERM_AVAILABLE);
-	cprintf("Marked\n");
-	if (perm == 1)
+	uint32 page_index = ((uint32)va - USER_HEAP_START)>>12;
+	if (user_pages[page_index]!= 0)
+	{
 		return 1;
+	}
 	else
+	{
 		return 0;
+	}
+}
+void mark_pages_arr(void* va, int pages)
+{
+	int pages_size = pages;
+	while(pages--)
+	{
+		uint32 page_index = ((uint32)va - USER_HEAP_START)>>12;
+		user_pages[page_index]= pages_size;
+	}
+
+}
+void unmark_pages_arr(void* va, int pages)
+{
+	while(pages--)
+	{
+		uint32 page_index = ((uint32)va - USER_HEAP_START)>>12;
+		user_pages[page_index]= 0;
+	}
 }
