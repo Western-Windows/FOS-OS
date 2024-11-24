@@ -928,7 +928,8 @@ void initialize_uheap_dynamic_allocator(struct Env* e, uint32 daStart, uint32 da
 	e->start = (uint32*) daStart;  // Dynamic allocation start address.
 	e->segmentBreak = (uint32*)(daStart + initSizeToAllocate);  // Current Break.
 	e->hardLimit = (uint32*) daLimit;  // The start of the unusable memory.
-
+	cprintf("hard limit %x\n", e->hardLimit);
+	cprintf("Start %x\n", e->start);
 	initialize_dynamic_allocator(daStart, initSizeToAllocate);
 }
 

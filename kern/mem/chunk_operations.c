@@ -143,15 +143,14 @@ void* sys_sbrk(int numOfPages)
 	//return (void*)-1 ;
 	/*====================================*/
 	struct Env* env = get_cpu_proc(); //the current running Environment to adjust its break limit
-
 	if (numOfPages == 0) {
-			return segmentBreak;
+			return env->segmentBreak;
 		}
-		uint32 available_size = (uint32)hardLimit - (uint32)segmentBreak;
+		uint32 available_size = (uint32)env->hardLimit - (uint32)env->segmentBreak;
 		uint32 available_pages = available_size / PAGE_SIZE;
 		uint32 size_added = (numOfPages * PAGE_SIZE);
 
-		void* return_address = segmentBreak;
+		void* return_address = env->segmentBreak;
 
 		//cprintf("number of available pages: %d\n",available_pages);
 		//check if number of pages needed exceeds number of pages available
@@ -159,13 +158,13 @@ void* sys_sbrk(int numOfPages)
 			return (void *) -1;
 		}
 		//cprintf("position of previous segment break: %p\n",segmentBreak);
-		segmentBreak = (uint32*)((char*)segmentBreak + size_added);
+		env->segmentBreak = (uint32*)((char*)env->segmentBreak + size_added);
 
 		void* currentAddress = return_address;
-		void* givenRange = segmentBreak;
+		void* givenRange = env->segmentBreak;
 
 		//cprintf("size added : %d\n",size_added);
-		uint32* segmentBreak_in_uint32 = (uint32*)segmentBreak;
+		uint32* segmentBreak_in_uint32 = (uint32*)env->segmentBreak;
 		uint32* new_end_block = segmentBreak_in_uint32 - 1;
 		//cprintf("position of the new end block %p\n",new_end_block);
 		//cprintf("position of present segment break: %p\n",segmentBreak);

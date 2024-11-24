@@ -20,6 +20,7 @@ void* sbrk(int increment)
 //=================================
 void* malloc(uint32 size)
 {
+	cprintf("Malloc\n");
 	//==============================================================
 	//DON'T CHANGE THIS CODE========================================
 	if (size == 0) return NULL ;
@@ -50,19 +51,24 @@ void* malloc(uint32 size)
 	// Page Allocator
 	else
 	{
+		cprintf("Page\n");
+		cprintf("myEnv hardlimit %x\n ", myEnv->hardLimit);
 		uint32 required_pages = ROUNDUP(size,PAGE_SIZE)>>12;
 		uint32 start_va= (uint32)(((char*)myEnv->hardLimit)+ PAGE_SIZE);
 		int curr_pages=0;
 
-		for (int i=start_va; i<= USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
+		for (uint32 i=start_va + PAGE_SIZE; i<= USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
 		{
+			cprintf("Loop %x\n", i);
 
 			if(is_marked((void*)i)==0) // Check if page is unmarked (can be used)
 			{
+				cprintf("isMarked\n");
 				curr_pages++;
 			}
 			else // If marked, start over counting from next index
 			{
+				cprintf("isMareked Else\n");
 				curr_pages=0;
 				start_va=i+PAGE_SIZE;
 			}
@@ -73,7 +79,9 @@ void* malloc(uint32 size)
 				va = (void*)start_va;
 				uint32 page_index = (start_va - USER_HEAP_START)>>12;
 				user_pages[page_index]= curr_pages;
+				cprintf("before\n");
 				sys_allocate_user_mem((uint32)va, required_pages*PAGE_SIZE);
+				cprintf("after\n");
 				break;
 			}
 		}
@@ -225,8 +233,11 @@ void freeHeap(void* virtual_address)
 
 bool is_marked(void* va)
 {
-	uint32 dir_index = PDX(va);
+	cprintf("Marked Beginning\n");
+	uint32 virtual = (uint32)va;
+	uint32 dir_index = PDX(virtual);
 	int perm = myEnv->env_page_directory[dir_index] & (PERM_AVAILABLE);
+	cprintf("Marked\n");
 	if (perm == 1)
 		return 1;
 	else
