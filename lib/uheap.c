@@ -1,8 +1,6 @@
 #include <inc/lib.h>
-
 int user_pages[NUM_OF_UHEAP_PAGES];
 int firstTimeSleepLock = 1;
-struct sleeplock user_pages_lck;
 
 //==================================================================================//
 //============================ REQUIRED FUNCTIONS ==================================//
@@ -56,14 +54,6 @@ void* malloc(uint32 size)
 		uint32 start_va= (uint32)(((char*)myEnv->hardLimit)+ PAGE_SIZE);
 		int curr_pages=0;
 
-		// Sleep lock for User Pages
-		if (firstTimeSleepLock)
-		{
-			firstTimeSleepLock = 0;
-			init_sleeplock(&user_pages_lck, "User Pages Sleep Lock");
-		}
-		acquire_sleeplock(&user_pages_lck);
-
 		for (int i=start_va; i<= USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
 		{
 
@@ -80,8 +70,8 @@ void* malloc(uint32 size)
 			if (curr_pages == required_pages) // Found required consecutive pages
 			{
 				found =1;
-				va = start_va;
-				uint32 page_index = (va - USER_HEAP_START)>>12;
+				va = (void*)start_va;
+				uint32 page_index = (start_va - USER_HEAP_START)>>12;
 				user_pages[page_index]= curr_pages;
 				sys_allocate_user_mem((uint32)va, required_pages*PAGE_SIZE);
 				break;
@@ -92,8 +82,6 @@ void* malloc(uint32 size)
 		{
 			va = NULL;
 		}
-
-		release_sleeplock(&user_pages_lck);
 		return va;
 	}
 }
@@ -237,9 +225,9 @@ void freeHeap(void* virtual_address)
 
 bool is_marked(void* va)
 {
-	int permission= pt_get_page_permissions(myEnv->env_page_directory, (uint32)va);
-
-	if (permission & (PERM_AVAILABLE)==1)
+	uint32 dir_index = PDX(va);
+	int perm = myEnv->env_page_directory[dir_index] & (PERM_AVAILABLE);
+	if (perm == 1)
 		return 1;
 	else
 		return 0;
