@@ -66,8 +66,14 @@ inline struct FrameInfo** create_frames_storage(int numOfFrames)
 {
 	//TODO: [PROJECT'24.MS2 - #16] [4] SHARED MEMORY - create_frames_storage()
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("create_frames_storage is not implemented yet");
+	//panic("create_frames_storage is not implemented yet");
 	//Your Code is Here...
+	struct FrameInfo* frames_storage[numOfFrames];
+	for (int i = 0; i < numOfFrames; i++){
+		frames_storage[i] = NULL;
+	}
+	struct FrameInfo** ptr = frames_storage;
+	return ptr;
 
 }
 
@@ -81,8 +87,38 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
 {
 	//TODO: [PROJECT'24.MS2 - #16] [4] SHARED MEMORY - create_share()
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("create_share is not implemented yet");
+	//panic("create_share is not implemented yet");
 	//Your Code is Here...
+
+	uint32 *va = kmalloc(sizeof(struct Share));
+	if (va == NULL){
+		return NULL;
+	}
+	struct Share sharedObject;
+	struct Share *sharedObjectPtr;
+	sharedObject.ownerID = ownerID;
+	for (int i = 0; i < sizeof(shareName) / 4; i++){
+		sharedObject.name[i] = shareName[i];
+	}
+	sharedObject.size = size;
+	sharedObject.isWritable = isWritable;
+	sharedObject.references = 1;
+	sharedObjectPtr = &sharedObject;
+	if (sharedObjectPtr == NULL){
+		kfree(va);
+		return NULL;
+	}
+	uint32 id = (uint32)sharedObjectPtr;
+	id &= 0x7FFFFFFF;
+	sharedObject.ID = id;
+	struct FrameInfo ** framesStorage = create_frames_storage(ROUNDUP(size,PAGE_SIZE) / PAGE_SIZE);
+	if (framesStorage == NULL){
+		kfree(va);
+		return NULL;
+	}
+	sharedObject.framesStorage = framesStorage;
+	return sharedObjectPtr;
+
 
 }
 
@@ -97,9 +133,19 @@ struct Share* get_share(int32 ownerID, char* name)
 {
 	//TODO: [PROJECT'24.MS2 - #17] [4] SHARED MEMORY - get_share()
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("get_share is not implemented yet");
+	//panic("get_share is not implemented yet");
 	//Your Code is Here...
+	acquire_spinlock(&AllShares.shareslock);
+	struct Share *ptr = AllShares.shares_list.lh_first;
 
+
+	for (int i = 0; i < LIST_SIZE(&AllShares.shares_list) - 1; i++){
+		if (ptr->ownerID == ownerID && (strncmp(ptr->name, name, sizeof(name)/ 4) == 0)){
+			return ptr;
+		}
+		ptr = LIST_NEXT(ptr);
+	}
+	return NULL;
 }
 
 //=========================
