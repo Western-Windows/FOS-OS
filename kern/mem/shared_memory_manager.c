@@ -152,13 +152,54 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 {
 	//TODO: [PROJECT'24.MS2 - #19] [4] SHARED MEMORY [KERNEL SIDE] - createSharedObject()
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("createSharedObject is not implemented yet");
+	//panic("createSharedObject is not implemented yet");
 	//Your Code is Here...
 
 	struct Env* myenv = get_cpu_proc(); //The calling environment
+
+	struct share* isExistingObject = get_share(ownerID,shareName);
+	if (isExistingObject != NULL)
+	{
+		return E_SHARED_MEM_EXISTS;
+	}
+
+	struct Share* ptrToSharedObject = create_share(ownerID, shareName, size, isWritable);
+
+	if (ptrToSharedObject == NULL)
+	{
+		return E_NO_SHARE;
+	}
+
+	LIST_INSERT_TAIL(&AllShares.shares_list, ptrToSharedObject);
+
+	size = ROUNDUP(size,PAGE_SIZE);
+	int framesNumber = size/PAGE_SIZE;
+	uint32 currentAddress = virtual_address;
+	int index = 0;
+
+	while (framesNumber --)
+	{
+		// Allocation of frames in memory.
+		struct FrameInfo*  frame = NULL;
+		int allocateResult = allocate_frame(&frame);
+
+		uint32 phys_frame = to_physical_address(frame);
+		phys_to_virt[FRAME_NUMBER(phys_frame)] = currentAddress;
+
+		// Mapping of frames.
+		allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_WRITEABLE);
+		if (allocateResult == E_NO_MEM)
+		{
+			LIST_REMOVE(&AllShares.shares_list, ptrToSharedObject);
+			free_frame(frame);
+			return E_NO_SHARE;
+		}
+
+		ptrToSharedObject->framesStorage[index] = frame;
+		currentAddress += PAGE_SIZE;
+		index ++;
+	}
 }
-
-
 //======================
 // [5] Get Share Object:
 //======================
