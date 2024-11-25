@@ -97,7 +97,7 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
 	struct Share sharedObject;
 	struct Share *sharedObjectPtr;
 	sharedObject.ownerID = ownerID;
-	for (int i = 0; i < sizeof(shareName) / 4; i++){
+	for (int i = 0; i < sizeof(shareName) / sizeof(int); i++){
 		sharedObject.name[i] = shareName[i];
 	}
 	sharedObject.size = size;
@@ -137,7 +137,7 @@ struct Share* get_share(int32 ownerID, char* name)
 	//Your Code is Here...
 	struct Share *ptr = AllShares.shares_list.lh_first;
 	for (int i = 0; i < LIST_SIZE(&AllShares.shares_list); i++){
-		if (ptr->ownerID == ownerID && (strncmp(ptr->name, name, sizeof(name)/ 4) == 0)){
+		if (ptr->ownerID == ownerID && (strncmp(ptr->name, name, sizeof(name)/ sizeof(int)) == 0)){
 			return ptr;
 		}
 		ptr = LIST_NEXT(ptr);
