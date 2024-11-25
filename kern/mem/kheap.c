@@ -241,6 +241,11 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit){
     	// Allocation of frames in memory.
     	struct FrameInfo*  frame = NULL;
     	int allocateResult = allocate_frame(&frame);
+    	if (allocateResult == E_NO_MEM)
+		{
+			free_frame(frame);
+			return E_NO_MEM;
+		}
 
     	uint32 phys_frame = to_physical_address(frame);
     	phys_to_virt[FRAME_NUMBER(phys_frame)] = currentAddress;
@@ -249,7 +254,7 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit){
     	allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_WRITEABLE);
     	if (allocateResult == E_NO_MEM)
     	{
-            free_frame(frame);
+            unmap_frame(ptr_page_directory, currentAddress);
             return E_NO_MEM;
     	}
     	currentAddress += PAGE_SIZE;
