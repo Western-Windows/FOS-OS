@@ -185,7 +185,6 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		if (allocateResult == E_NO_MEM)
 		{
 			LIST_REMOVE(&AllShares.shares_list, ptrToSharedObject);
-			free_frame(frame);
 			return E_NO_SHARE;
 		}
 
@@ -194,7 +193,7 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		if (allocateResult == E_NO_MEM)
 		{
 			LIST_REMOVE(&AllShares.shares_list, ptrToSharedObject);
-			unmap_frame(myenv->env_page_directory, currentAddress);
+			free_frame(frame);
 			return E_NO_SHARE;
 		}
 
