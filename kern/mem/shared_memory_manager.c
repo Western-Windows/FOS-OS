@@ -157,7 +157,7 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 
 	struct Env* myenv = get_cpu_proc(); //The calling environment
 
-	struct share* isExistingObject = get_share(ownerID,shareName);
+	struct Share* isExistingObject = get_share(ownerID,shareName);
 	if (isExistingObject != NULL)
 	{
 		return E_SHARED_MEM_EXISTS;
@@ -174,7 +174,7 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 
 	size = ROUNDUP(size,PAGE_SIZE);
 	int framesNumber = size/PAGE_SIZE;
-	uint32 currentAddress = virtual_address;
+	uint32 currentAddress = (uint32)virtual_address;
 	int index = 0;
 
 	while (framesNumber --)
@@ -182,12 +182,6 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		// Allocation of frames in memory.
 		struct FrameInfo*  frame = NULL;
 		int allocateResult = allocate_frame(&frame);
-
-		uint32 phys_frame = to_physical_address(frame);
-		phys_to_virt[FRAME_NUMBER(phys_frame)] = currentAddress;
-
-		// Mapping of frames.
-		allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_WRITEABLE);
 		if (allocateResult == E_NO_MEM)
 		{
 			LIST_REMOVE(&AllShares.shares_list, ptrToSharedObject);
@@ -195,10 +189,20 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 			return E_NO_SHARE;
 		}
 
+		// Mapping of frames.
+		allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_WRITEABLE);
+		if (allocateResult == E_NO_MEM)
+		{
+			LIST_REMOVE(&AllShares.shares_list, ptrToSharedObject);
+			unmap_frame(myenv->env_page_directory, currentAddress);
+			return E_NO_SHARE;
+		}
+
 		ptrToSharedObject->framesStorage[index] = frame;
 		currentAddress += PAGE_SIZE;
 		index ++;
 	}
+	return ptrToSharedObject->ID;
 }
 //======================
 // [5] Get Share Object:
