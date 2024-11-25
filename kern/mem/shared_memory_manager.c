@@ -135,11 +135,8 @@ struct Share* get_share(int32 ownerID, char* name)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("get_share is not implemented yet");
 	//Your Code is Here...
-	acquire_spinlock(&AllShares.shareslock);
 	struct Share *ptr = AllShares.shares_list.lh_first;
-
-
-	for (int i = 0; i < LIST_SIZE(&AllShares.shares_list) - 1; i++){
+	for (int i = 0; i < LIST_SIZE(&AllShares.shares_list); i++){
 		if (ptr->ownerID == ownerID && (strncmp(ptr->name, name, sizeof(name)/ 4) == 0)){
 			return ptr;
 		}
