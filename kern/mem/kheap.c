@@ -252,7 +252,6 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit)
     	int allocateResult = allocate_frame(&frame);
     	if (allocateResult == E_NO_MEM)
 		{
-			free_frame(frame);
 			return E_NO_MEM;
 		}
 
@@ -263,7 +262,7 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit)
     	allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_USER|PERM_WRITEABLE|PERM_PRESENT);
     	if (allocateResult == E_NO_MEM)
     	{
-            unmap_frame(ptr_page_directory, currentAddress);
+			free_frame(frame);
             return E_NO_MEM;
     	}
     	currentAddress += PAGE_SIZE;
