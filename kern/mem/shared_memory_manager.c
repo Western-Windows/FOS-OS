@@ -190,7 +190,7 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		}
 
 		// Mapping of frames.
-		allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_WRITEABLE);
+		allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_USER|PERM_WRITEABLE|PERM_PRESENT);
 		if (allocateResult == E_NO_MEM)
 		{
 			LIST_REMOVE(&AllShares.shares_list, ptrToSharedObject);
