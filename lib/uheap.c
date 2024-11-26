@@ -159,7 +159,7 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 	uint32 start_va= (uint32)(((char*)myEnv->hardLimit)+ PAGE_SIZE);
 	int curr_pages=0;
 
-	for (uint32 i=start_va; i<= USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
+	for (uint32 i=start_va; i< USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
 	{
 
 		if(is_marked((void*)i)==0) // Check if page is unmarked (can be used)
@@ -197,8 +197,55 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 {
 	//TODO: [PROJECT'24.MS2 - #20] [4] SHARED MEMORY [USER SIDE] - sget()
 	// Write your code here, remove the panic and write your code
-	panic("sget() is not implemented yet...!!");
-	return NULL;
+	//panic("sget() is not implemented yet...!!");
+
+	uint32 sizeOfSharedObject = sys_getSizeOfSharedObject(ownerEnvID, sharedVarName);
+	if (sizeOfSharedObject == E_SHARED_MEM_NOT_EXISTS)
+	{
+		return NULL;
+	}
+
+	bool isFound = 0;
+	void* va;
+	int returns;
+
+	struct Share* sharedObject = get_share(ownerEnvID, sharedVarName);
+	uint32 size = sharedObject->size;
+	uint32 givenRange = ROUNDUP(size,PAGE_SIZE);
+	uint32 required_pages = givenRange/PAGE_SIZE;
+
+	uint32 start_va = (uint32)(((char*)myEnv->hardLimit) + PAGE_SIZE);
+	int curr_pages = 0;
+
+	for (uint32 i = start_va; i < USER_HEAP_MAX; i += PAGE_SIZE) // Loop through Page Allocator range
+	{
+		if(is_marked((void*)i) == 0) // Check if page is unmarked (can be used)
+		{
+			curr_pages ++;
+		}
+		else // If marked, start over counting from next index
+		{
+			curr_pages = 0;
+			start_va = i + PAGE_SIZE;
+		}
+
+		if (curr_pages == required_pages) // Found required consecutive pages
+		{
+			isFound = 1;
+			va = (void*)start_va;
+			uint32 page_index = (start_va - USER_HEAP_START)>>12;
+			mark_pages_arr(va, required_pages);
+			returns = sys_getSharedObject(ownerEnvID, sharedVarName, va);
+			break;
+		}
+	}
+
+	if (!isFound || returns == E_SHARED_MEM_NOT_EXISTS) // Required consecutive pages not found
+	{
+		va = NULL;
+	}
+
+	return va;
 }
 
 
