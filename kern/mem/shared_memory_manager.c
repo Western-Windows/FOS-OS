@@ -216,13 +216,13 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 
 	struct Env* myenv = get_cpu_proc(); //The calling environment
 
-	struct Share* sharedObject = get_share(ownerID,shareName);
+	struct Share* sharedObject = get_share(ownerID, shareName);
 	if(sharedObject == NULL)
 	{
 		return E_SHARED_MEM_NOT_EXISTS;
 	}
 
-	struct Frames_Info** framesStorage = sharedObject->framesStorage;
+	struct FrameInfo** framesStorage = sharedObject->framesStorage;
 	uint32 size = sharedObject->size;
 	uint32 framesNumber = ROUNDUP(size,PAGE_SIZE)/PAGE_SIZE;
 	uint32 perm = sharedObject->isWritable;
@@ -234,11 +234,11 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 	{
 		if(perm == PERM_WRITEABLE)
 		{
-			map_frame(myenv->env_page_directory, framesStorage[index], (void*)va, PERM_WRITEABLE);
+			map_frame(myenv->env_page_directory, framesStorage[index], va, PERM_WRITEABLE|PERM_PRESENT|PERM_USER);
 		}
 		else if(perm == (~PERM_WRITEABLE))
 		{
-			map_frame(myenv->env_page_directory, framesStorage[index], (void*)va, (~PERM_WRITEABLE));
+			map_frame(myenv->env_page_directory, framesStorage[index], va, (~PERM_WRITEABLE)|PERM_PRESENT|PERM_USER);
 		}
 
 		index ++;

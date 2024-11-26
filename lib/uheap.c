@@ -61,7 +61,7 @@ void* malloc(uint32 size)
 		uint32 start_va= (uint32)(((char*)myEnv->hardLimit)+ PAGE_SIZE);
 		int curr_pages=0;
 
-		for (uint32 i=start_va; i<= USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
+		for (uint32 i=start_va; i< USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
 		{
 			//cprintf("Loop %x\n", i);
 
@@ -209,9 +209,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 	void* va;
 	int returns;
 
-	struct Share* sharedObject = get_share(ownerEnvID, sharedVarName);
-	uint32 size = sharedObject->size;
-	uint32 givenRange = ROUNDUP(size,PAGE_SIZE);
+	uint32 givenRange = ROUNDUP(sizeOfSharedObject,PAGE_SIZE);
 	uint32 required_pages = givenRange/PAGE_SIZE;
 
 	uint32 start_va = (uint32)(((char*)myEnv->hardLimit) + PAGE_SIZE);
