@@ -15,6 +15,7 @@
 #define TOTAL_FRAMES (RAM_SIZE / PAGE_SIZE)
 int phys_to_virt[TOTAL_FRAMES];
 int pageStatus[32766];
+int it = 0;
 int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate, uint32 daLimit)
 {
 	//TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - initialize_kheap_dynamic_allocator
@@ -93,13 +94,13 @@ void* sbrk(int numOfPages)
 }
 //TODO: [PROJECT'24.MS2 - BONUS#2] [1] KERNEL HEAP - Fast Page Allocator
 void* kmalloc(unsigned int size){
-//	if(isKHeapPlacementStrategyFIRSTFIT() == 0){
-//		setKHeapPlacementStrategyFIRSTFIT();
-//	}
+	if(isKHeapPlacementStrategyFIRSTFIT() == 0){
+		setKHeapPlacementStrategyFIRSTFIT();
+	}
 	if(size > DYN_ALLOC_MAX_BLOCK_SIZE){
 		uint32 required_pages = ROUNDUP(size,PAGE_SIZE)>>12;
 		int start=-1,temp = 0;
-		for(int i = 0; i < statusLimit;i++){
+		for(int i = it; i < statusLimit;i++){
 			if(~pageStatus[i]){
 				if(~start){
 					start = -1;
@@ -107,10 +108,10 @@ void* kmalloc(unsigned int size){
 				}
 				do{
 					i+=(pageStatus[i]);
-				}while(~pageStatus[i]);
+				}while((i < statusLimit) && (~pageStatus[i]));
 
 			}
-			if(pageStatus[i]==-1){
+			if((i < statusLimit) &&pageStatus[i]==-1){
 				if(start==-1){
 					start = i;
 				}
@@ -120,6 +121,8 @@ void* kmalloc(unsigned int size){
 					if(allocateMapFrame(va,va+(PAGE_SIZE*required_pages)) == E_NO_MEM){
 						return NULL;
 					}
+					if(start == it)
+						it = start + required_pages;
 					pageStatus[start] = required_pages;
 					return (void*)va;
 				}
@@ -150,6 +153,8 @@ void kfree(void* virtual_address)
 	uint32 freedVa = (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))>>12;
 	int pages = pageStatus[freedVa];
 	uint32 startIndex = (va - ((uint32)((char*)hardLimit+PAGE_SIZE)))>>12;
+	if(startIndex < it)
+		it = startIndex;
 	pageStatus[startIndex] = -1;
 //	freePageStatus(startIndex,pages);
 	// Pages Range
@@ -255,12 +260,6 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit){
     return 0;
 }
 
-void allocatePage(int index,int size){
-	for(int i = index; i < index+size;i++){
-		pageStatus[i]= size;
-	}
-}
-
 void freePageStatus(int index,int size){
 	for(int i = index; i < index+size;i++){
 		pageStatus[i] = -1;
@@ -272,5 +271,4 @@ void init(){
 		phys_to_virt[i] = -1;
 	}
 }
-
 

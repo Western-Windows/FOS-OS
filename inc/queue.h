@@ -114,6 +114,7 @@ struct name {								\
 	uint32 size;					/*maintained by list functions */ \
 }
 
+
 /*
  * Set a list head variable to LIST_HEAD_INITIALIZER(head)
  * to reset it to the empty list.

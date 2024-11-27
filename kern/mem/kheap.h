@@ -49,5 +49,4 @@ void* segmentBreak;
 void* hardLimit;
 uint32 statusLimit;
 void init();
-
 #endif // FOS_KERN_KHEAP_H_
