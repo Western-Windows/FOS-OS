@@ -12,6 +12,7 @@
 #include "memory_manager.h"
 #include <inc/queue.h>
 #include <inc/dynamic_allocator.h>
+//#include <kern/trap/syscall.h>
 
 //extern void inctst();
 
@@ -143,36 +144,36 @@ void* sys_sbrk(int numOfPages)
 	//return (void*)-1 ;
 	/*====================================*/
 	struct Env* env = get_cpu_proc(); //the current running Environment to adjust its break limit
+	//cprintf("entered sys_sbrk\n");
 	if (numOfPages == 0) {
 			return env->segmentBreak;
-		}
+	}
+
 		uint32 available_size = (uint32)env->hardLimit - (uint32)env->segmentBreak;
 		uint32 available_pages = available_size / PAGE_SIZE;
 		uint32 size_added = (numOfPages * PAGE_SIZE);
-
+		//cprintf("calculated address!\n");
 		void* return_address = env->segmentBreak;
+		uint32* return_address_in_uint32 = (uint32*) return_address;
 
-		//cprintf("number of available pages: %d\n",available_pages);
+
+		uint32 free_frames = MemFrameLists.free_frame_list.size;
 		//check if number of pages needed exceeds number of pages available
-		if (available_pages < numOfPages) {
+		if (available_pages < numOfPages || free_frames < numOfPages) {
+			//cprintf("I will return -1\n");
 			return (void *) -1;
 		}
-		//cprintf("position of previous segment break: %p\n",segmentBreak);
+		//cprintf("position of previous segment break: %p\n",env->segmentBreak);
 		env->segmentBreak = (uint32*)((char*)env->segmentBreak + size_added);
-
-		void* currentAddress = return_address;
-		void* givenRange = env->segmentBreak;
 
 		//cprintf("size added : %d\n",size_added);
 		uint32* segmentBreak_in_uint32 = (uint32*)env->segmentBreak;
 		uint32* new_end_block = segmentBreak_in_uint32 - 1;
 		//cprintf("position of the new end block %p\n",new_end_block);
-		//cprintf("position of present segment break: %p\n",segmentBreak);
 		*new_end_block = 1;
-
-		set_block_data(return_address,size_added,1);
-		//cprintf("size of return address : %d\n",get_block_size(return_address));
-		free_block(return_address);
+		//cprintf("adjusted end block\n");
+		//cprintf("position of present segment break: %p\n",env->segmentBreak);
+		//cprintf("return address: %p\n",return_address);
 		return return_address;
 }
 

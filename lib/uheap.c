@@ -12,8 +12,10 @@ int firstTimeSleepLock = 1;
 /*2023*/
 void* sbrk(int increment)
 {
-	cprintf("Sys Sbrk\n");
-	return (void*) sys_sbrk(increment);
+	//cprintf("Sys Sbrk\n");
+	void* return_address = sys_sbrk(increment);
+	//cprintf("return in sbrk userside %p \n",return_address);
+	return return_address;
 }
 
 //=================================
@@ -21,7 +23,7 @@ void* sbrk(int increment)
 //=================================
 void* malloc(uint32 size)
 {
-	cprintf("Malloc\n");
+	//cprintf("Malloc\n");
 	//==============================================================
 	//DON'T CHANGE THIS CODE========================================
 	if (size == 0) return NULL ;
@@ -39,29 +41,30 @@ void* malloc(uint32 size)
 	// Dynamic Allocator
 	if (size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
-//		if (sys_isUHeapPlacementStrategyFIRSTFIT() == 1) // First Fit
-//		{
-//			va= alloc_block_FF(size);
-//		}
-//		else if (sys_isUHeapPlacementStrategyBESTFIT() == 1) // Best Fit
-//		{
-//			va= alloc_block_BF(size);
-//		}
-		cprintf("Block Alloc\n");
-		va= alloc_block_FF(size);
+		if (sys_isUHeapPlacementStrategyFIRSTFIT() == 1) // First Fit
+		{
+			va= alloc_block_FF(size);
+		}
+		else if (sys_isUHeapPlacementStrategyBESTFIT() == 1) // Best Fit
+		{
+			va= alloc_block_BF(size);
+		}
+		//cprintf("Block Alloc\n");
+		//va= alloc_block_FF(size);
+		//cprintf("VA: %p\n",va);
 		return va;
 	}
 	// Page Allocator
 	else
 	{
-		cprintf("Page\n");
-		cprintf("myEnv hardlimit %x\n ", myEnv->hardLimit);
+		//cprintf("Page\n");
+		//cprintf("myEnv hardlimit %x\n ", myEnv->hardLimit);
 		uint32 givenRange = ROUNDUP(size,PAGE_SIZE);
 		uint32 required_pages = givenRange/PAGE_SIZE;
 		uint32 start_va= (uint32)(((char*)myEnv->hardLimit)+ PAGE_SIZE);
 		int curr_pages=0;
 
-		for (uint32 i=start_va; i<= USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
+		for (uint32 i=start_va; i< USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
 		{
 			//cprintf("Loop %x\n", i);
 
@@ -82,7 +85,7 @@ void* malloc(uint32 size)
 				uint32 page_index = (start_va - USER_HEAP_START)>>12;
 				mark_pages_arr(va, required_pages);
 				sys_allocate_user_mem((uint32)va, required_pages*PAGE_SIZE);
-				cprintf("start VA = %x,Size = %d",start_va,required_pages);
+				//cprintf("start VA = %x,Size = %d",start_va,required_pages);
 				break;
 			}
 		}
