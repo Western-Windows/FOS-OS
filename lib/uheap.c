@@ -152,7 +152,7 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 	//panic("smalloc() is not implemented yet...!!");
 
 	void* va;
-	int ret;
+	uint32 ret;
 	bool found = 0;
 	uint32 givenRange = ROUNDUP(size,PAGE_SIZE);
 	uint32 required_pages = givenRange/PAGE_SIZE;
@@ -185,6 +185,7 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 
 	if (!found || ret == E_NO_SHARE || ret == E_SHARED_MEM_EXISTS) // Required consecutive pages not found
 	{
+		cprintf("null condition");
 		va = NULL;
 	}
 	return va;
