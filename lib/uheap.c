@@ -210,8 +210,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 	void* va;
 	int returns;
 
-	uint32 givenRange = ROUNDUP(sizeOfSharedObject,PAGE_SIZE);
-	uint32 required_pages = givenRange/PAGE_SIZE;
+	uint32 required_pages = ROUNDUP(sizeOfSharedObject,PAGE_SIZE)/PAGE_SIZE;
 
 	uint32 start_va = (uint32)(((char*)myEnv->hardLimit) + PAGE_SIZE);
 	int curr_pages = 0;
@@ -244,6 +243,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 		va = NULL;
 	}
 
+	cprintf("va of sget %x",va);
 	return va;
 }
 

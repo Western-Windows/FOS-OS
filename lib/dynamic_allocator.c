@@ -467,7 +467,7 @@ void free_block(void *va)
 	uint32 new_size;
 	struct BlockElement* prev =  LIST_PREV(free_block);
 	struct BlockElement* next =  LIST_NEXT(free_block);
-		cprintf("prev1%x\n",prev);
+
 //		cprintf("prev2%x\n",prev);
 	// Case: Merge with left and right blocks
 	if (prev_empty && next_empty)
