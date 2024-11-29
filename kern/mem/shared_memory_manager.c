@@ -129,6 +129,8 @@ struct Share* get_share(int32 ownerID, char* name)
 	{
 		if (ptr->ownerID == ownerID && (strncmp(ptr->name, name,sizeof(ptr->name)/ sizeof(int)) == 0))
 		{
+			cprintf("\n(get_share) Id %d \n",ptr->ownerID);
+			cprintf("\n(get_share) name %s \n",ptr->name);
 			return ptr;
 		}
 	}
@@ -144,6 +146,9 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("createSharedObject is not implemented yet");
 	//Your Code is Here...
+
+	cprintf("\nCreate share object\n");
+	cprintf("\nowner Id %d\n", ownerID);
 
 	struct Env* myenv = get_cpu_proc(); //The calling environment
 

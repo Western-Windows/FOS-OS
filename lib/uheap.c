@@ -243,7 +243,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 		va = NULL;
 	}
 
-	cprintf("va of sget %x",va);
+	cprintf("\nva of sget %s %x\n",sharedVarName,va);
 	return va;
 }
 
