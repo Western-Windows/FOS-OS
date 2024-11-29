@@ -69,6 +69,9 @@ inline struct FrameInfo** create_frames_storage(int numOfFrames)
 	//panic("create_frames_storage is not implemented yet");
 	//Your Code is Here...
 	struct FrameInfo** frames_storage = (void*)kmalloc((numOfFrames*sizeof(struct FrameInfo*)));
+	for (int i = 0; i < numOfFrames; i++){
+		frames_storage[i] = NULL;
+	}
 	return frames_storage;
 }
 
@@ -121,19 +124,20 @@ struct Share* get_share(int32 ownerID, char* name)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("get_share is not implemented yet");
 	//Your Code is Here...
-	//acquire_spinlock(&AllShares.shareslock);
+
+	acquire_spinlock(&AllShares.shareslock);
 
 	struct Share *ptr;
 	//for (int i = 0; i < LIST_SIZE(&AllShares.shares_list); i++)
 	LIST_FOREACH (ptr, &AllShares.shares_list)
 	{
-		if (ptr->ownerID == ownerID && (strncmp(ptr->name, name,sizeof(ptr->name)/ sizeof(int)) == 0))
+		if (ptr->ownerID == ownerID && (strcmp(ptr->name, name) == 0))
 		{
-			cprintf("\n(get_share) Id %d \n",ptr->ownerID);
-			cprintf("\n(get_share) name %s \n",ptr->name);
+			release_spinlock(&AllShares.shareslock);
 			return ptr;
 		}
 	}
+	release_spinlock(&AllShares.shareslock);
 	return NULL;
 }
 
@@ -146,9 +150,6 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("createSharedObject is not implemented yet");
 	//Your Code is Here...
-
-	cprintf("\nCreate share object\n");
-	cprintf("\nowner Id %d\n", ownerID);
 
 	struct Env* myenv = get_cpu_proc(); //The calling environment
 
@@ -189,9 +190,6 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 
 		// Mapping of frames.
 		map_frame(myenv->env_page_directory, frame, currentAddress, PERM_WRITEABLE|PERM_PRESENT|PERM_USER);
-		cprintf("Creating shared object '%s' with size = %d, rounded size = %d\n", shareName, size, ROUNDUP(size, PAGE_SIZE));
-		cprintf("Mapping frame %p to VA %x\n", frame, currentAddress);
-
 		if (allocateResult == E_NO_MEM)
 		{
 		    acquire_spinlock(&AllShares.shareslock);
@@ -242,7 +240,7 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 		}
 		else
 		{
-			map_frame(myenv->env_page_directory, frameStorage[index], va, (~PERM_WRITEABLE)|PERM_PRESENT|PERM_USER);
+			map_frame(myenv->env_page_directory, frameStorage[index], va, PERM_PRESENT|PERM_USER);
 		}
 
 		index ++;
