@@ -55,6 +55,7 @@ _main(void)
 		int freeFrames = sys_calculate_free_frames() ;
 		uint32 size = USER_HEAP_MAX - pagealloc_start - PAGE_SIZE + 1;
 		y = smalloc("y", size, 1);
+		cprintf("\nsmalloc called\n");
 		if (y != NULL) {is_correct = 0; cprintf("Trying to create a shared object that exceed the SHARED area limit and the corresponding error is not returned!!");}
 		if ((freeFrames - sys_calculate_free_frames()) !=  0) {is_correct = 0; cprintf("Wrong allocation: make sure that you don't allocate any memory if the shared object exceed the SHARED area limit");}
 	}

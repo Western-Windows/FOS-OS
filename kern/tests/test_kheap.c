@@ -1031,13 +1031,10 @@ int test_kfree_bestfirstfit()
 		kfree(ptr_allocations[0]);
 		if ((freeDiskFrames - pf_calculate_free_frames()) != 0) { correct = 0; cprintf("2.1 Page file is changed while it's not expected to. (pages are wrongly allocated/de-allocated in PageFile)\n"); }
 		if ((sys_calculate_free_frames() - freeFrames) < 512 ) { correct = 0; cprintf("2.1 Wrong kfree: pages in memory are not freed correctly\n"); }
-		cprintf("live,love&laugh\n");
 		//kfree 1st 2 KB from BLOCK Allocator
 		freeFrames = sys_calculate_free_frames() ;
 		freeDiskFrames = pf_calculate_free_frames() ;
-		cprintf("freeframe %d, freedisk %d",freeFrames,freeDiskFrames);
 		kfree(ptr_allocations[2]);
-		cprintf("hehe");
 
 		if ((freeDiskFrames - pf_calculate_free_frames()) != 0) { correct = 0; cprintf("2.2 Page file is changed while it's not expected to. (pages are wrongly allocated/de-allocated in PageFile)\n"); }
 		if ((sys_calculate_free_frames() - freeFrames) != 0 ) { correct = 0; cprintf("2.2 Wrong free: freeing a block from the dynamic allocator should not affect the free frames\n"); }
@@ -1103,9 +1100,7 @@ int test_kfree_bestfirstfit()
 		//1 KB [Should be allocated in 1st hole in the Dynamic Allocator]
 		freeFrames = sys_calculate_free_frames() ;
 		freeDiskFrames = pf_calculate_free_frames() ;
-		cprintf("sbrk %x",segmentBreak);
 		ptr_allocations[9] = kmalloc(1*kilo);
-		cprintf("dalimit = %x,va1 = %x , va2 = %x,seg = %x",hardLimit,ptr_allocations[9] ,ptr_allocations[2],segmentBreak);
 		if (ptr_allocations[9] != ptr_allocations[2])
 		{
 			correct = 0; cprintf("4.1 Wrong start address for the allocated space... check return address of kmalloc\n"); }
@@ -2020,7 +2015,7 @@ int test_ksbrk()
 		{ correct = 0; cprintf("A.2: Wrong memory allocation.\n"); }
 		if (((int)pf_calculate_free_frames() - freeDiskFrames) != 0)
 		{ correct = 0; cprintf("A.3: Page file is changed while it's not expected to. (pages are wrongly allocated/de-allocated in PageFile)\n"); }
-		cprintf("3adena 1 \n");
+
 
 		//=> Fill 1st page
 		actualSize = PAGE_SIZE - (2*kilo + 2*sizeof(int)) - INITIAL_BLOCK_ALLOCATIONS;
@@ -2035,7 +2030,7 @@ int test_ksbrk()
 		if (((int)pf_calculate_free_frames() - freeDiskFrames) != 0)
 		{ correct = 0; cprintf("A.6: Page file is changed while it's not expected to. (pages are wrongly allocated/de-allocated in PageFile)\n"); }
 
-		cprintf("3adena 2 \n");
+
 		//2 KB => sbrk is called while the last block is allocated
 		{
 			actualSize = 2*kilo;
@@ -2065,7 +2060,7 @@ int test_ksbrk()
 			if (((int)pf_calculate_free_frames() - freeDiskFrames) != 0)
 			{ correct = 0; cprintf("A.12: Page file is changed while it's not expected to. (pages are wrongly allocated/de-allocated in PageFile)\n"); }
 		}
-		cprintf("3adena 3 \n");
+
 		//=> Fill 2nd page
 		actualSize = PAGE_SIZE - 2*kilo ;
 		freeFrames = (int)sys_calculate_free_frames() ;

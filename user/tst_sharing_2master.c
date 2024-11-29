@@ -57,6 +57,8 @@ _main(void)
 	if (is_correct)	eval+=25;
 	is_correct = 1;
 
+	cprintf("\nEval 1 %d\n", eval);
+
 	*x = 10 ;
 	*y = 20 ;
 
@@ -82,6 +84,8 @@ _main(void)
 	if (is_correct)	eval+=25;
 	is_correct = 1;
 
+	cprintf("\nEval 2 %d\n", eval);
+
 	atomic_cprintf("%@Now, attempting to write a ReadOnly variable\n\n\n");
 
 	id1 = sys_create_env("shr2Slave2", (myEnv->page_WS_max_size),(myEnv->SecondListSize), (myEnv->percentage_of_WS_pages_to_be_removed));
@@ -97,6 +101,8 @@ _main(void)
 	if (is_correct)	eval+=25;
 	is_correct = 1;
 
+	cprintf("\nEval 3 %d\n", eval);
+
 	//Signal slave2
 	inctst();
 
@@ -108,6 +114,8 @@ _main(void)
 
 	if (is_correct)	eval+=25;
 	is_correct = 1;
+
+	cprintf("\nEval 4 %d\n", eval);
 
 	cprintf("\n%~Test of Shared Variables [Create & Get] completed. Eval = %d%%\n\n", eval);
 	return;
