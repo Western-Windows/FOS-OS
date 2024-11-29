@@ -144,7 +144,6 @@ void* sys_sbrk(int numOfPages)
 	//return (void*)-1 ;
 	/*====================================*/
 	struct Env* env = get_cpu_proc(); //the current running Environment to adjust its break limit
-	//cprintf("entered sys_sbrk\n");
 	if (numOfPages == 0) {
 			return env->segmentBreak;
 	}
@@ -152,28 +151,18 @@ void* sys_sbrk(int numOfPages)
 		uint32 available_size = (uint32)env->hardLimit - (uint32)env->segmentBreak;
 		uint32 available_pages = available_size / PAGE_SIZE;
 		uint32 size_added = (numOfPages * PAGE_SIZE);
-		//cprintf("calculated address!\n");
 		void* return_address = env->segmentBreak;
 		uint32* return_address_in_uint32 = (uint32*) return_address;
 
 
 		uint32 free_frames = MemFrameLists.free_frame_list.size;
-		//check if number of pages needed exceeds number of pages available
 		if (available_pages < numOfPages || free_frames < numOfPages) {
-			//cprintf("I will return -1\n");
 			return (void *) -1;
 		}
-		//cprintf("position of previous segment break: %p\n",env->segmentBreak);
 		env->segmentBreak = (uint32*)((char*)env->segmentBreak + size_added);
-
-		//cprintf("size added : %d\n",size_added);
 		uint32* segmentBreak_in_uint32 = (uint32*)env->segmentBreak;
 		uint32* new_end_block = segmentBreak_in_uint32 - 1;
-		//cprintf("position of the new end block %p\n",new_end_block);
 		*new_end_block = 1;
-		//cprintf("adjusted end block\n");
-		//cprintf("position of present segment break: %p\n",env->segmentBreak);
-		//cprintf("return address: %p\n",return_address);
 		return return_address;
 }
 
@@ -231,16 +220,13 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 			  env_page_ws_invalidate(e, l);
 			  l+=PAGE_SIZE;
 		}
-//yarb s7 ya ana ya ento y pointers 3aaaaaaaaaaaaaaaaaa
-//======================== BONOUS O(1) =====================================
+//======================== BONUS O(1) =====================================
 			if (e->page_last_WS_element != NULL)
 			{
 				struct WorkingSetElement* last = e->page_last_WS_element;
 				struct WorkingSetElement* first = e->page_WS_list.lh_first;
-				cprintf("WESELT");
 				if (first != last)
 			    {
-					cprintf("da5lt 25ern");
 			    	struct WorkingSetElement* temp = last->prev_next_info.le_prev;
 			    	e->page_WS_list.lh_last->prev_next_info.le_next = first; // Tail_Next yro7 lel Head //
 			    	first->prev_next_info.le_prev = e->page_WS_list.lh_last; // Head_Prev yro7 lel Tail //

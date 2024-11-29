@@ -12,9 +12,7 @@ int firstTimeSleepLock = 1;
 /*2023*/
 void* sbrk(int increment)
 {
-	//cprintf("Sys Sbrk\n");
 	void* return_address = sys_sbrk(increment);
-	//cprintf("return in sbrk userside %p \n",return_address);
 	return return_address;
 }
 
@@ -23,7 +21,6 @@ void* sbrk(int increment)
 //=================================
 void* malloc(uint32 size)
 {
-	//cprintf("Malloc\n");
 	//==============================================================
 	//DON'T CHANGE THIS CODE========================================
 	if (size == 0) return NULL ;
@@ -49,16 +46,11 @@ void* malloc(uint32 size)
 		{
 			va= alloc_block_BF(size);
 		}
-		//cprintf("Block Alloc\n");
-		//va= alloc_block_FF(size);
-		//cprintf("VA: %p\n",va);
 		return va;
 	}
 	// Page Allocator
 	else
 	{
-		//cprintf("Page\n");
-		//cprintf("myEnv hardlimit %x\n ", myEnv->hardLimit);
 		uint32 givenRange = ROUNDUP(size,PAGE_SIZE);
 		uint32 required_pages = givenRange/PAGE_SIZE;
 		uint32 start_va= (uint32)(((char*)myEnv->hardLimit)+ PAGE_SIZE);
@@ -66,7 +58,6 @@ void* malloc(uint32 size)
 
 		for (uint32 i=start_va; i< USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
 		{
-			//cprintf("Loop %x\n", i);
 
 			if(is_marked((void*)i)==0) // Check if page is unmarked (can be used)
 			{
@@ -85,7 +76,6 @@ void* malloc(uint32 size)
 				uint32 page_index = (start_va - USER_HEAP_START)>>12;
 				mark_pages_arr(va, required_pages);
 				sys_allocate_user_mem((uint32)va, required_pages*PAGE_SIZE);
-				//cprintf("start VA = %x,Size = %d",start_va,required_pages);
 				break;
 			}
 		}
@@ -113,7 +103,6 @@ void free(void* virtual_address)
 	// Block Range
 	if (va>=USER_HEAP_START && va< u_hard_limit)
 	{
-		cprintf("free user block..\n");
 		free_block((void*)va);
 		return;
 	}
@@ -126,7 +115,6 @@ void free(void* virtual_address)
 	// Pages Range
 	if(vaRoundDown>=u_hard_limit && vaRoundDown<=USER_HEAP_MAX)
 	{
-			cprintf("free user pages..\n");
 			unmark_pages_arr((void*)vaRoundDown, (uint32)pages);
 			sys_free_user_mem(vaRoundDown, pages*PAGE_SIZE);
 			return;
@@ -188,7 +176,6 @@ void* smalloc(char *sharedVarName, uint32 size, uint8 isWritable)
 
 	if (!found || ret == E_NO_SHARE || ret == E_SHARED_MEM_EXISTS) // Required consecutive pages not found
 	{
-		cprintf("null condition");
 		va = NULL;
 	}
 	return va;
@@ -245,8 +232,6 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 	{
 		va = NULL;
 	}
-
-	cprintf("\nva of sget %s %x\n",sharedVarName,va);
 	return va;
 }
 

@@ -69,7 +69,6 @@ void* sbrk(int numOfPages)
 	//====================================================
 
 	//TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
-	//cprintf("entered sbrk kheap\n");
 	if (numOfPages == 0) {
 		return segmentBreak;
 	}
@@ -93,9 +92,6 @@ void* sbrk(int numOfPages)
 	uint32* segmentBreak_in_uint32 = (uint32*)segmentBreak;
 	uint32* new_end_block = segmentBreak_in_uint32 - 1;
 	*new_end_block = 1;
-
-
-	//cprintf("out of sbrk kheap\n");
 	return return_address;
 	// Write your code here, remove the panic and write your code
 }
@@ -263,7 +259,7 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit)
     	phys_to_virt[FRAME_NUMBER(phys_frame)] = currentAddress;
 
     	// Mapping of frames.
-    	allocateResult = map_frame(ptr_page_directory, frame, currentAddress, PERM_USER|PERM_WRITEABLE|PERM_PRESENT);
+    	allocateResult = map_frame(ptr_page_directory, frame, currentAddress,PERM_WRITEABLE|PERM_PRESENT);
     	if (allocateResult == E_NO_MEM)
     	{
 			free_frame(frame);
