@@ -222,18 +222,37 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 //=====================================
 void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 {
-	/*====================================*/
-	/*Remove this line before start coding*/
-	//inctst();
-	//return;
-	/*====================================*/
+		uint32 l = virtual_address;
+		uint32 r = virtual_address+size;
+		while (l<r) {
+			  pf_remove_env_page(e, l);
+			  pt_set_page_permissions(e->env_page_directory, l, 0, PERM_AVAILABLE);
+			  unmap_frame(e->env_page_directory,l);
+			  env_page_ws_invalidate(e, l);
+			  l+=PAGE_SIZE;
+		}
+//yarb s7 ya ana ya ento y pointers 3aaaaaaaaaaaaaaaaaa
+//======================== BONOUS O(1) =====================================
+			if (e->page_last_WS_element != NULL)
+			{
+				struct WorkingSetElement* last = e->page_last_WS_element;
+				struct WorkingSetElement* first = e->page_WS_list.lh_first;
+				cprintf("WESELT");
+				if (first != last)
+			    {
+					cprintf("da5lt 25ern");
+			    	struct WorkingSetElement* temp = last->prev_next_info.le_prev;
+			    	e->page_WS_list.lh_last->prev_next_info.le_next = first; // Tail_Next yro7 lel Head //
+			    	first->prev_next_info.le_prev = e->page_WS_list.lh_last; // Head_Prev yro7 lel Tail //
+			    	temp->prev_next_info.le_next = NULL; // FIFO_PREV_Next = NULL //
+			    	e->page_WS_list.lh_last = temp; // Tail yro7 lel FIFO_PREV //
+			    	last->prev_next_info.le_prev = NULL; // FIFO_PREV = NULL //
+			    	e->page_WS_list.lh_first = last; // Head yro7 lel FIFO //
+			    }
+			}else{
+				return;
+			}
 
-	//TODO: [PROJECT'24.MS2 - #15] [3] USER HEAP [KERNEL SIDE] - free_user_mem
-	// Write your code here, remove the panic and write your code
-	panic("free_user_mem() is not implemented yet...!!");
-
-
-	//TODO: [PROJECT'24.MS2 - BONUS#3] [3] USER HEAP [KERNEL SIDE] - O(1) free_user_mem
 }
 
 //=====================================
