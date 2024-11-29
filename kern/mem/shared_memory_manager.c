@@ -264,8 +264,13 @@ void free_share(struct Share* ptrShare)
 {
 	//TODO: [PROJECT'24.MS2 - BONUS#4] [4] SHARED MEMORY [KERNEL SIDE] - free_share()
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("free_share is not implemented yet");
+	//panic("free_share is not implemented yet");
 	//Your Code is Here...
+	acquire_spinlock(&AllShares.shareslock);
+	LIST_REMOVE(&AllShares.shares_list, ptrShare);
+	release_spinlock(&AllShares.shareslock);
+	kfree(ptrShare->framesStorage);
+	kfree(ptrShare);
 
 }
 //========================
@@ -275,7 +280,41 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 {
 	//TODO: [PROJECT'24.MS2 - BONUS#4] [4] SHARED MEMORY [KERNEL SIDE] - freeSharedObject()
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("freeSharedObject is not implemented yet");
+	//panic("freeSharedObject is not implemented yet");
 	//Your Code is Here...
-
+	struct Share * it = NULL;
+	bool found = 0;
+	acquire_spinlock(&AllShares.shareslock);
+	LIST_FOREACH (it, &AllShares.shares_list)
+	{
+		if (it->ID == sharedObjectID)
+		{
+			found = 1;
+			break;
+		}
+	}
+	release_spinlock(&AllShares.shareslock);
+	if (!found){
+		return E_SHARED_MEM_NOT_EXISTS;
+	}
+	else{
+		struct Env* myenv = get_cpu_proc();
+		uint32 va = (uint32)startVA;
+		for (uint32 i = va; i < va + it->size; i += PAGE_SIZE){
+			unmap_frame(myenv->env_page_directory,i);
+//			uint32 *ptr;
+//			get_page_table(myenv->env_page_directory,i,&ptr);
+//			pt_clear_page_table_entry(myenv->env_page_directory, i);
+//			uint32 ret = pd_is_table_used(myenv->env_page_directory, i);
+//			if (ret == 0){
+//				pd_clear_page_dir_entry(myenv->env_page_directory, (uint32)ptr);
+//			}
+		}
+		it->references--;
+		if (it->references-- <= 0){
+			free_share(it);
+		}
+		tlbflush();
+		return 0;
+	}
 }
