@@ -1,4 +1,6 @@
 #include <inc/lib.h>
+int user_pages[NUM_OF_UHEAP_PAGES];
+int firstTimeSleepLock = 1;
 
 //==================================================================================//
 //============================ REQUIRED FUNCTIONS ==================================//
@@ -10,7 +12,10 @@
 /*2023*/
 void* sbrk(int increment)
 {
-	return (void*) sys_sbrk(increment);
+	//cprintf("Sys Sbrk\n");
+	void* return_address = sys_sbrk(increment);
+	//cprintf("return in sbrk userside %p \n",return_address);
+	return return_address;
 }
 
 //=================================
@@ -18,17 +23,79 @@ void* sbrk(int increment)
 //=================================
 void* malloc(uint32 size)
 {
+	//cprintf("Malloc\n");
 	//==============================================================
 	//DON'T CHANGE THIS CODE========================================
 	if (size == 0) return NULL ;
 	//==============================================================
 	//TODO: [PROJECT'24.MS2 - #12] [3] USER HEAP [USER SIDE] - malloc()
 	// Write your code here, remove the panic and write your code
-	panic("malloc() is not implemented yet...!!");
-	return NULL;
+	//panic("malloc() is not implemented yet...!!");
+	//return NULL;
 	//Use sys_isUHeapPlacementStrategyFIRSTFIT() and	sys_isUHeapPlacementStrategyBESTFIT()
 	//to check the current strategy
 
+	void* va;
+	bool found = 0;
+
+	// Dynamic Allocator
+	if (size <= DYN_ALLOC_MAX_BLOCK_SIZE)
+	{
+		if (sys_isUHeapPlacementStrategyFIRSTFIT() == 1) // First Fit
+		{
+			va= alloc_block_FF(size);
+		}
+		else if (sys_isUHeapPlacementStrategyBESTFIT() == 1) // Best Fit
+		{
+			va= alloc_block_BF(size);
+		}
+		//cprintf("Block Alloc\n");
+		//va= alloc_block_FF(size);
+		//cprintf("VA: %p\n",va);
+		return va;
+	}
+	// Page Allocator
+	else
+	{
+		//cprintf("Page\n");
+		//cprintf("myEnv hardlimit %x\n ", myEnv->hardLimit);
+		uint32 givenRange = ROUNDUP(size,PAGE_SIZE);
+		uint32 required_pages = givenRange/PAGE_SIZE;
+		uint32 start_va= (uint32)(((char*)myEnv->hardLimit)+ PAGE_SIZE);
+		int curr_pages=0;
+
+		for (uint32 i=start_va; i< USER_HEAP_MAX; i+= PAGE_SIZE) // Loop through Page Allocator range
+		{
+			//cprintf("Loop %x\n", i);
+
+			if(is_marked((void*)i)==0) // Check if page is unmarked (can be used)
+			{
+				curr_pages++;
+			}
+			else // If marked, start over counting from next index
+			{
+				curr_pages=0;
+				start_va=i+PAGE_SIZE;
+			}
+
+			if (curr_pages == required_pages) // Found required consecutive pages
+			{
+				found =1;
+				va = (void*)start_va;
+				uint32 page_index = (start_va - USER_HEAP_START)>>12;
+				mark_pages_arr(va, required_pages);
+				sys_allocate_user_mem((uint32)va, required_pages*PAGE_SIZE);
+				//cprintf("start VA = %x,Size = %d",start_va,required_pages);
+				break;
+			}
+		}
+
+		if (!found) // Required consecutive pages not found
+		{
+			va = NULL;
+		}
+		return va;
+	}
 }
 
 //=================================
@@ -38,7 +105,39 @@ void free(void* virtual_address)
 {
 	//TODO: [PROJECT'24.MS2 - #14] [3] USER HEAP [USER SIDE] - free()
 	// Write your code here, remove the panic and write your code
-	panic("free() is not implemented yet...!!");
+	//panic("free() is not implemented yet...!!");
+
+	uint32 va = (uint32) virtual_address;
+	uint32 u_hard_limit =(uint32)(((char*)myEnv->hardLimit)+ PAGE_SIZE);
+
+	// Block Range
+	if (va>=USER_HEAP_START && va< u_hard_limit)
+	{
+		cprintf("free user block..\n");
+		free_block((void*)va);
+		return;
+	}
+
+
+	uint32 vaRoundDown = ROUNDDOWN(va,PAGE_SIZE);
+	uint32 page_index = (vaRoundDown - USER_HEAP_START)>>12;
+	uint32 pages = user_pages[page_index];
+
+	// Pages Range
+	if(vaRoundDown>=u_hard_limit && vaRoundDown<=USER_HEAP_MAX)
+	{
+			cprintf("free user pages..\n");
+			unmark_pages_arr((void*)vaRoundDown, (uint32)pages);
+			sys_free_user_mem(vaRoundDown, pages*PAGE_SIZE);
+			return;
+	}
+
+	//Invalid address
+	else
+	{
+		panic("failed to free address %x, illegal address", va);
+		return;
+	}
 }
 
 
@@ -135,4 +234,39 @@ void freeHeap(void* virtual_address)
 {
 	panic("Not Implemented");
 
+}
+
+bool is_marked(void* va)
+{
+	uint32 page_index = ((uint32)va - USER_HEAP_START)>>12;
+	if (user_pages[page_index]!= 0)
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+void mark_pages_arr(void* va, int pages)
+{
+	uint32 virtualAddress = (uint32)va;
+	int pages_size = pages;
+	while(pages--)
+	{
+		uint32 page_index = (virtualAddress - USER_HEAP_START)>>12;
+		user_pages[page_index]= pages_size;
+		virtualAddress += PAGE_SIZE;
+	}
+
+}
+void unmark_pages_arr(void* va, int pages)
+{
+	uint32 virtualAddress = (uint32)va;
+	while(pages--)
+	{
+		uint32 page_index = (virtualAddress - USER_HEAP_START)>>12;
+		user_pages[page_index]= 0;
+		virtualAddress += PAGE_SIZE;
+	}
 }

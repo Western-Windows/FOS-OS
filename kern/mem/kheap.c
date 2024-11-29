@@ -63,6 +63,7 @@ void* sbrk(int numOfPages)
 	//====================================================
 
 	//TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
+	//cprintf("entered sbrk kheap\n");
 	if (numOfPages == 0) {
 		return segmentBreak;
 	}
@@ -87,8 +88,8 @@ void* sbrk(int numOfPages)
 	uint32* new_end_block = segmentBreak_in_uint32 - 1;
 	*new_end_block = 1;
 
-	set_block_data(return_address,size_added,1);
-	free_block(return_address);
+
+	//cprintf("out of sbrk kheap\n");
 	return return_address;
 	// Write your code here, remove the panic and write your code
 }

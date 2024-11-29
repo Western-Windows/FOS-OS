@@ -11,6 +11,8 @@
 #include "kheap.h"
 #include "memory_manager.h"
 #include <inc/queue.h>
+#include <inc/dynamic_allocator.h>
+//#include <kern/trap/syscall.h>
 
 //extern void inctst();
 
@@ -139,11 +141,40 @@ void* sys_sbrk(int numOfPages)
 	//TODO: [PROJECT'24.MS2 - #11] [3] USER HEAP - sys_sbrk
 	/*====================================*/
 	/*Remove this line before start coding*/
-	return (void*)-1 ;
+	//return (void*)-1 ;
 	/*====================================*/
 	struct Env* env = get_cpu_proc(); //the current running Environment to adjust its break limit
+	//cprintf("entered sys_sbrk\n");
+	if (numOfPages == 0) {
+			return env->segmentBreak;
+	}
+
+		uint32 available_size = (uint32)env->hardLimit - (uint32)env->segmentBreak;
+		uint32 available_pages = available_size / PAGE_SIZE;
+		uint32 size_added = (numOfPages * PAGE_SIZE);
+		//cprintf("calculated address!\n");
+		void* return_address = env->segmentBreak;
+		uint32* return_address_in_uint32 = (uint32*) return_address;
 
 
+		uint32 free_frames = MemFrameLists.free_frame_list.size;
+		//check if number of pages needed exceeds number of pages available
+		if (available_pages < numOfPages || free_frames < numOfPages) {
+			//cprintf("I will return -1\n");
+			return (void *) -1;
+		}
+		//cprintf("position of previous segment break: %p\n",env->segmentBreak);
+		env->segmentBreak = (uint32*)((char*)env->segmentBreak + size_added);
+
+		//cprintf("size added : %d\n",size_added);
+		uint32* segmentBreak_in_uint32 = (uint32*)env->segmentBreak;
+		uint32* new_end_block = segmentBreak_in_uint32 - 1;
+		//cprintf("position of the new end block %p\n",new_end_block);
+		*new_end_block = 1;
+		//cprintf("adjusted end block\n");
+		//cprintf("position of present segment break: %p\n",env->segmentBreak);
+		//cprintf("return address: %p\n",return_address);
+		return return_address;
 }
 
 //=====================================
@@ -153,13 +184,37 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 {
 	/*====================================*/
 	/*Remove this line before start coding*/
-//	inctst();
-//	return;
+	//inctst();
+	//return;
 	/*====================================*/
 
 	//TODO: [PROJECT'24.MS2 - #13] [3] USER HEAP [KERNEL SIDE] - allocate_user_mem()
 	// Write your code here, remove the panic and write your code
-	panic("allocate_user_mem() is not implemented yet...!!");
+	//panic("allocate_user_mem() is not implemented yet...!!");
+
+	uint32 startOfRange = virtual_address;
+
+	size = ROUNDUP(size, PAGE_SIZE); // Handles multiples of 4, and internal fragmentations.
+	int pagesNumber = size/PAGE_SIZE; // Number of pages in given range.
+
+	uint32 addressOfPage = startOfRange;
+
+	for (int pageNo = 0 ; pageNo < pagesNumber ; pageNo ++)
+	{
+		int tableIndx = PTX(addressOfPage);
+		uint32 *ptr_page_table = NULL;
+
+		get_page_table(e->env_page_directory, addressOfPage, &ptr_page_table);
+
+		if(ptr_page_table == NULL)
+		{
+			create_page_table(e->env_page_directory, addressOfPage);
+			get_page_table(e->env_page_directory, addressOfPage, &ptr_page_table);
+		}
+		ptr_page_table[tableIndx] |= (PERM_AVAILABLE); // Marks page.
+
+		addressOfPage += PAGE_SIZE;
+	}
 }
 
 //=====================================
@@ -167,18 +222,37 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 //=====================================
 void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 {
-	/*====================================*/
-	/*Remove this line before start coding*/
-//	inctst();
-//	return;
-	/*====================================*/
+		uint32 l = virtual_address;
+		uint32 r = virtual_address+size;
+		while (l<r) {
+			  pf_remove_env_page(e, l);
+			  pt_set_page_permissions(e->env_page_directory, l, 0, PERM_AVAILABLE);
+			  unmap_frame(e->env_page_directory,l);
+			  env_page_ws_invalidate(e, l);
+			  l+=PAGE_SIZE;
+		}
+//yarb s7 ya ana ya ento y pointers 3aaaaaaaaaaaaaaaaaa
+//======================== BONOUS O(1) =====================================
+			if (e->page_last_WS_element != NULL)
+			{
+				struct WorkingSetElement* last = e->page_last_WS_element;
+				struct WorkingSetElement* first = e->page_WS_list.lh_first;
+				cprintf("WESELT");
+				if (first != last)
+			    {
+					cprintf("da5lt 25ern");
+			    	struct WorkingSetElement* temp = last->prev_next_info.le_prev;
+			    	e->page_WS_list.lh_last->prev_next_info.le_next = first; // Tail_Next yro7 lel Head //
+			    	first->prev_next_info.le_prev = e->page_WS_list.lh_last; // Head_Prev yro7 lel Tail //
+			    	temp->prev_next_info.le_next = NULL; // FIFO_PREV_Next = NULL //
+			    	e->page_WS_list.lh_last = temp; // Tail yro7 lel FIFO_PREV //
+			    	last->prev_next_info.le_prev = NULL; // FIFO_PREV = NULL //
+			    	e->page_WS_list.lh_first = last; // Head yro7 lel FIFO //
+			    }
+			}else{
+				return;
+			}
 
-	//TODO: [PROJECT'24.MS2 - #15] [3] USER HEAP [KERNEL SIDE] - free_user_mem
-	// Write your code here, remove the panic and write your code
-	panic("free_user_mem() is not implemented yet...!!");
-
-
-	//TODO: [PROJECT'24.MS2 - BONUS#3] [3] USER HEAP [KERNEL SIDE] - O(1) free_user_mem
 }
 
 //=====================================

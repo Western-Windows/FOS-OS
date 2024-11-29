@@ -152,18 +152,20 @@ void fault_handler(struct Trapframe *tf)
 			//(e.g. pointing to unmarked user heap page, kernel or wrong access rights),
 			//your code is here
             uint32 permissions = pt_get_page_permissions(faulted_env->env_page_directory, fault_va);
+            cprintf("Faulted add %x\n", fault_va);
             if (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX){
+            	cprintf("Marked Cond\n");
             	if ((permissions & (PERM_PRESENT)) == 0 && (permissions & (PERM_AVAILABLE)) == 0){
             		cprintf("pointing to unmarked page\n");
             		env_exit();
             	}
             }
-            if ((permissions & (PERM_USER)) == 0){
-                 cprintf("pointing to kernel\n");
+            cprintf("After unmarked\n");
+            if ((permissions & (PERM_PRESENT))&& (permissions & (PERM_USER)) == 0){
+                 cprintf("pointing to kernel %x\n", fault_va);
                  env_exit();
             }
-
-            if ((permissions & (PERM_PRESENT)) && (permissions & (PERM_WRITEABLE)) == 0){
+            else if ((permissions & (PERM_PRESENT)) && (permissions & (PERM_WRITEABLE)) == 0){
                 cprintf("doesn't exist\n");
                 env_exit();
             }
@@ -254,9 +256,8 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 			if (check != E_NO_MEM){
 				check = pf_read_env_page(faulted_env, (void*)fault_va);
 				if (check == E_PAGE_NOT_EXIST_IN_PF){
-					if (fault_va > USER_HEAP_START && fault_va < USER_HEAP_MAX){/*Valid address inside heap*/}
+					if (fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX){/*Valid address inside heap*/}
 					else if (fault_va < USTACKTOP && fault_va >= USTACKBOTTOM){/*Valid address inside stack*/}
-					else if(fault_va != 0){}
 					else{
 						env_exit();
 					}

@@ -233,6 +233,7 @@ void *alloc_block_FF(uint32 size)
 		if (!is_initialized)
 		{
 			uint32 required_size = size + 2*sizeof(int) /*header & footer*/ + 2*sizeof(int) /*da begin & end*/ ;
+			//cprintf("I will call sbrk here\n");
 			uint32 da_start = (uint32)sbrk(ROUNDUP(required_size, PAGE_SIZE)/PAGE_SIZE);
 			uint32 da_break = (uint32)sbrk(0);
 			initialize_dynamic_allocator(da_start, da_break - da_start);
@@ -283,10 +284,14 @@ void *alloc_block_FF(uint32 size)
 			uint32 numberOfPages = ROUNDUP(neededSize,PAGE_SIZE)/PAGE_SIZE;
 			//cprintf("numberOfPagesCalled : %d\n",numberOfPages);
 			//cprintf("size of last block : %d\n\n",get_block_size(LIST_LAST(&freeBlocksList)));
+			//cprintf("I will call sbrk in block allocator\n");
 			void * return_address = sbrk(numberOfPages);
 			if (return_address == (void *)-1) {
 				return NULL;
 			}
+			uint32 size_added = (numberOfPages * PAGE_SIZE);
+			set_block_data(return_address,size_added,1);
+			free_block(return_address);
 
 			it = LIST_LAST(&freeBlocksList);
 			freeBlockSize = get_block_size(it);
@@ -316,6 +321,7 @@ void *alloc_block_FF(uint32 size)
 			set_block_data(it, freeBlockSize, 1);
 			LIST_REMOVE(&freeBlocksList, (struct BlockElement*)it);
 		}
+		//cprintf("DONE\n");
 		return it;
 	}
 	else
