@@ -39,12 +39,12 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 
     uint32 currentAddress = daStart;
     uint32 givenRange = daStart + initSizeToAllocate;
-
+    acquire_spinlock(&MemFrameLists.mfllock);
     if (allocateMapFrame(currentAddress,givenRange) == E_NO_MEM)
 	{
 		panic("No physical memory available for page table.");  // No memory.
 	}
-
+    release_spinlock(&MemFrameLists.mfllock);
     initialize_dynamic_allocator(daStart, initSizeToAllocate);
 
     freePageStatus(0,32767);
@@ -85,10 +85,12 @@ void* sbrk(int numOfPages)
 
 	void* currentAddress = return_address;
 	void* givenRange = segmentBreak;
+	acquire_spinlock(&MemFrameLists.mfllock);
 	if (allocateMapFrame((uint32)currentAddress,(uint32)givenRange) == E_NO_MEM)
 	{
 		return (void *) -1;
 	}
+	release_spinlock(&MemFrameLists.mfllock);
 	uint32* segmentBreak_in_uint32 = (uint32*)segmentBreak;
 	uint32* new_end_block = segmentBreak_in_uint32 - 1;
 	*new_end_block = 1;
@@ -121,9 +123,11 @@ void* kmalloc(unsigned int size){
 				temp++;
 				if(temp == required_pages){
 					uint32 va = ((uint32)hardLimit + PAGE_SIZE*(start+1));
+					acquire_spinlock(&MemFrameLists.mfllock);
 					if(allocateMapFrame(va,va+(PAGE_SIZE*required_pages)) == E_NO_MEM){
 						return NULL;
 					}
+					release_spinlock(&MemFrameLists.mfllock);
 					if(start == it)
 						it = start + required_pages;
 					pageStatus[start] = required_pages;
@@ -162,7 +166,7 @@ void kfree(void* virtual_address)
 	// Pages Range
 	if(va>=((uint32)hardLimit + PAGE_SIZE)&&va<KERNEL_HEAP_MAX)
 	{
-
+		acquire_spinlock(&MemFrameLists.mfllock);
 		for(int i = 0;i < pages;i++){
 			uint32 *ptr_page_table = NULL;
 			struct FrameInfo *free_frame = get_frame_info(ptr_page_directory, va, &ptr_page_table);
@@ -175,6 +179,7 @@ void kfree(void* virtual_address)
 			va+=PAGE_SIZE;
 	    	phys_to_virt[FRAME_NUMBER(to_physical_address(free_frame))] = -1;
 		}
+		release_spinlock(&MemFrameLists.mfllock);
 	}
 
 	//Invalid address
@@ -195,12 +200,13 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 	//refer to the project presentation and documentation for details
 
 	//EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED ==================
-
+	acquire_spinlock(&MemFrameLists.mfllock);
 	uint32 *temp = NULL;
 	struct FrameInfo *ans = get_frame_info(ptr_page_directory, virtual_address, &temp);
-	if (ans == NULL) return 0;
+	if (ans == NULL){ release_spinlock(&MemFrameLists.mfllock); return 0;}
 	uint32 pg = to_physical_address(ans);
 	uint32 off = virtual_address & 0xFFF;
+	release_spinlock(&MemFrameLists.mfllock);
 	return pg | off;
 }
 
@@ -214,9 +220,10 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 	//refer to the project presentation and documentation for details
 
 	//EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED ==================
-
+	acquire_spinlock(&MemFrameLists.mfllock);
 	if ( phys_to_virt[FRAME_NUMBER(physical_address)] == -1) return 0;
 	uint32 off = physical_address & 0xFFF;
+	release_spinlock(&MemFrameLists.mfllock);
 	return phys_to_virt[FRAME_NUMBER(physical_address)] + off;
 }
 //=================================================================================//
