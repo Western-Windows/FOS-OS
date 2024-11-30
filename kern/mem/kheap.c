@@ -249,7 +249,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		kfree(virtual_address);
 		return NULL;
 	}
-	if(virtual_address <= (hardLimit)){
+	if(virtual_address < (hardLimit)){
 		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE){
 			return realloc_block_FF(virtual_address,new_size);
 		}
