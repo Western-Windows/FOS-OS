@@ -153,15 +153,14 @@ void kfree(void* virtual_address)
 		return;
 	}
 	uint32 vaRoundDown = ROUNDDOWN(va,PAGE_SIZE);
-	uint32 freedVa = (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))>>12;
-	int pages = pageStatus[freedVa];
-	uint32 startIndex = (va - ((uint32)((char*)hardLimit+PAGE_SIZE)))>>12;
+	uint32  startIndex= (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))>>12;
+	int pages = pageStatus[startIndex];
 	if(startIndex < it)
 		it = startIndex;
 	pageStatus[startIndex] = -1;
 //	freePageStatus(startIndex,pages);
 	// Pages Range
-	if(va>=((uint32)hardLimit + PAGE_SIZE)&&va<=KERNEL_HEAP_MAX)
+	if(va>=((uint32)hardLimit + PAGE_SIZE)&&va<KERNEL_HEAP_MAX)
 	{
 
 		for(int i = 0;i < pages;i++){
