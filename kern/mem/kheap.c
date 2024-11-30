@@ -252,12 +252,88 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 //	A call with virtual_address = null is equivalent to kmalloc().
 //	A call with new_size = zero is equivalent to kfree().
 
+
 void *krealloc(void *virtual_address, uint32 new_size)
 {
 	//TODO: [PROJECT'24.MS2 - BONUS#1] [1] KERNEL HEAP - krealloc
 	// Write your code here, remove the panic and write your code
-	return NULL;
-	panic("krealloc() is not implemented yet...!!");
+
+	acquire_spinlock(&MemFrameLists.mfllock);
+	if(virtual_address==NULL && new_size){
+		release_spinlock(&MemFrameLists.mfllock);
+		return kmalloc(new_size);
+	}
+	if(virtual_address==NULL && (new_size==0)){
+		release_spinlock(&MemFrameLists.mfllock);
+		return NULL;
+	}
+	if((new_size==0)){
+		kfree(virtual_address);
+		release_spinlock(&MemFrameLists.mfllock);
+		return NULL;
+	}
+	if(virtual_address < (hardLimit)){
+		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE){
+			release_spinlock(&MemFrameLists.mfllock);
+			return realloc_block_FF(virtual_address,new_size);
+		}
+		kfree(virtual_address);
+		release_spinlock(&MemFrameLists.mfllock);
+		return kmalloc(new_size);
+	}
+	uint32 vaRoundDown = ROUNDDOWN((uint32)virtual_address,PAGE_SIZE);
+	uint32 start_index = (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))>>12;
+	int pages = pageStatus[start_index];
+	int old_size = pages*PAGE_SIZE;
+	uint32 size = ROUNDUP(new_size,PAGE_SIZE);
+	if(new_size<old_size){
+		if(new_size<=DYN_ALLOC_MAX_BLOCK_SIZE) {
+			void* tmpva = realloc_block_FF(NULL,new_size);
+			pageStatus[start_index] = -1;
+			kfree(virtual_address);
+			release_spinlock(&MemFrameLists.mfllock);
+			return tmpva;
+		}
+		pageStatus[start_index] = size/PAGE_SIZE;
+		void* x = (void*)ROUNDUP(((vaRoundDown+new_size)),PAGE_SIZE);
+		kfree(x);
+		release_spinlock(&MemFrameLists.mfllock);
+		return virtual_address;
+	}
+	if(old_size == size)
+	{
+		release_spinlock(&MemFrameLists.mfllock);
+		return virtual_address;
+
+	}
+	uint32 new_size_pages = size/PAGE_SIZE;
+	uint32 rem = new_size_pages - pages;
+	uint32 check = start_index + pages;
+	if((check+rem-1)>=statusLimit)
+	{
+		void* va = kmalloc(new_size);
+		if(va!=NULL)
+			memcpy(va,virtual_address,old_size);
+		kfree(virtual_address);
+		release_spinlock(&MemFrameLists.mfllock);
+		return va;
+	}
+	for(int i = check; i < (check+rem);i++){
+		if(~pageStatus[i]){
+			void* va = kmalloc(new_size);
+			if(va!=NULL)
+				memcpy(va,virtual_address,old_size);
+			kfree(virtual_address);
+			release_spinlock(&MemFrameLists.mfllock);
+			return va;
+		}
+	}
+	uint32 startVa = ((uint32)((char*)hardLimit+(PAGE_SIZE*(check+1))));
+	uint32 limit = ((uint32)((char*)hardLimit+(PAGE_SIZE*(check+rem))));
+	allocateMapFrame(startVa , limit);
+	pageStatus[start_index] = size/PAGE_SIZE;
+	release_spinlock(&MemFrameLists.mfllock);
+	return virtual_address;
 }
 
 /********************Helper Functions***************************/
