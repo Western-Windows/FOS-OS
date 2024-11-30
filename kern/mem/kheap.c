@@ -269,7 +269,8 @@ void *krealloc(void *virtual_address, uint32 new_size)
 			return tmpva;
 		}
 		pageStatus[start_index] = size/PAGE_SIZE;
-		kfree((void*)((char*)virtual_address+new_size));
+		void* x = (void*)ROUNDUP(((vaRoundDown+new_size)),PAGE_SIZE);
+		kfree(x);
 		return virtual_address;
 	}
 	if(old_size == size)
@@ -277,7 +278,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	uint32 new_size_pages = size/PAGE_SIZE;
 	uint32 rem = new_size_pages - pages;
 	uint32 check = start_index + pages;
-	if((check+rem)>=statusLimit)
+	if((check+rem-1)>=statusLimit)
 	{
 		void* va = kmalloc(new_size);
 		if(va!=NULL)
