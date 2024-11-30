@@ -297,7 +297,9 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	}
 	uint32 startVa = ((uint32)((char*)hardLimit+(PAGE_SIZE*(check+1))));
 	uint32 limit = ((uint32)((char*)hardLimit+(PAGE_SIZE*(check+rem))));
+	acquire_spinlock(&MemFrameLists.mfllock);
 	allocateMapFrame(startVa , limit);
+	release_spinlock(&MemFrameLists.mfllock);
 	pageStatus[start_index] = size/PAGE_SIZE;
 	return virtual_address;
 }
