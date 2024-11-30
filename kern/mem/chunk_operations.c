@@ -211,34 +211,32 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 //=====================================
 void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 {
-		uint32 l = virtual_address;
-		uint32 r = virtual_address+size;
-		while (l<r) {
+		uint32 l=virtual_address,r=ROUNDUP(virtual_address+size,PAGE_SIZE);
+		while(l<r){
 			  pf_remove_env_page(e, l);
-			  pt_set_page_permissions(e->env_page_directory, l, 0, PERM_AVAILABLE);
+			  pt_set_page_permissions(e->env_page_directory,l,0,PERM_AVAILABLE);
 			  unmap_frame(e->env_page_directory,l);
 			  env_page_ws_invalidate(e, l);
 			  l+=PAGE_SIZE;
 		}
-//======================== BONUS O(1) =====================================
-			if (e->page_last_WS_element != NULL)
+		struct WorkingSetElement* lasts = e->page_last_WS_element;
+		if (lasts == NULL)
+		{
+			return;
+		}else{
+			struct WorkingSetElement* last = e->page_last_WS_element;
+			struct WorkingSetElement* first = e->page_WS_list.lh_first;
+			if (first != last)
 			{
-				struct WorkingSetElement* last = e->page_last_WS_element;
-				struct WorkingSetElement* first = e->page_WS_list.lh_first;
-				if (first != last)
-			    {
-			    	struct WorkingSetElement* temp = last->prev_next_info.le_prev;
-			    	e->page_WS_list.lh_last->prev_next_info.le_next = first; // Tail_Next yro7 lel Head //
-			    	first->prev_next_info.le_prev = e->page_WS_list.lh_last; // Head_Prev yro7 lel Tail //
-			    	temp->prev_next_info.le_next = NULL; // FIFO_PREV_Next = NULL //
-			    	e->page_WS_list.lh_last = temp; // Tail yro7 lel FIFO_PREV //
-			    	last->prev_next_info.le_prev = NULL; // FIFO_PREV = NULL //
-			    	e->page_WS_list.lh_first = last; // Head yro7 lel FIFO //
-			    }
-			}else{
-				return;
+				struct WorkingSetElement* temp = last->prev_next_info.le_prev;
+				e->page_WS_list.lh_last->prev_next_info.le_next = first; //Tail_Next yro7 lel Head
+				first->prev_next_info.le_prev = e->page_WS_list.lh_last; //Head_Prev yro7 lel Tail
+				temp->prev_next_info.le_next = NULL; //FIFO_PREV_Next = NULL
+				e->page_WS_list.lh_last = temp; //Tail yro7 lel FIFO_PREV
+				last->prev_next_info.le_prev = NULL; //FIFO_PREV = NULL
+				e->page_WS_list.lh_first = last; //Head yro7 lel FIFO
 			}
-
+		}
 }
 
 //=====================================
