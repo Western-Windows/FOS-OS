@@ -22,6 +22,7 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 	// Write your code here, remove the panic and write your code
 	//panic("initialize_kheap_dynamic_allocator() is not implemented yet...!!");
 
+    acquire_spinlock(&MemFrameLists.mfllock);
 	init();
 
 	start = (uint32*) daStart;  // Dynamic allocation start address.
@@ -39,16 +40,15 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 
     uint32 currentAddress = daStart;
     uint32 givenRange = daStart + initSizeToAllocate;
-    acquire_spinlock(&MemFrameLists.mfllock);
     if (allocateMapFrame(currentAddress,givenRange) == E_NO_MEM)
 	{
 		panic("No physical memory available for page table.");  // No memory.
 	}
-    release_spinlock(&MemFrameLists.mfllock);
     initialize_dynamic_allocator(daStart, initSizeToAllocate);
 
     freePageStatus(0,32767);
 
+    release_spinlock(&MemFrameLists.mfllock);
     return 0;  // Successful initialization.
 }
 
@@ -69,7 +69,9 @@ void* sbrk(int numOfPages)
 	//====================================================
 
 	//TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
+	acquire_spinlock(&MemFrameLists.mfllock);
 	if (numOfPages == 0) {
+		release_spinlock(&MemFrameLists.mfllock);
 		return segmentBreak;
 	}
 	uint32 available_size = (uint32)hardLimit - (uint32)segmentBreak;
@@ -79,26 +81,28 @@ void* sbrk(int numOfPages)
 	void* return_address = segmentBreak;
 	//check if number of pages needed exceeds number of pages available
 	if (available_pages < numOfPages) {
+		release_spinlock(&MemFrameLists.mfllock);
 		return (void *) -1;
 	}
 	segmentBreak = (uint32*)((char*)segmentBreak + size_added);
 
 	void* currentAddress = return_address;
 	void* givenRange = segmentBreak;
-	acquire_spinlock(&MemFrameLists.mfllock);
 	if (allocateMapFrame((uint32)currentAddress,(uint32)givenRange) == E_NO_MEM)
 	{
+		release_spinlock(&MemFrameLists.mfllock);
 		return (void *) -1;
 	}
-	release_spinlock(&MemFrameLists.mfllock);
 	uint32* segmentBreak_in_uint32 = (uint32*)segmentBreak;
 	uint32* new_end_block = segmentBreak_in_uint32 - 1;
 	*new_end_block = 1;
+	release_spinlock(&MemFrameLists.mfllock);
 	return return_address;
 	// Write your code here, remove the panic and write your code
 }
 //TODO: [PROJECT'24.MS2 - BONUS#2] [1] KERNEL HEAP - Fast Page Allocator
 void* kmalloc(unsigned int size){
+	acquire_spinlock(&MemFrameLists.mfllock);
 	if(isKHeapPlacementStrategyFIRSTFIT() == 0){
 		setKHeapPlacementStrategyFIRSTFIT();
 	}
@@ -123,22 +127,26 @@ void* kmalloc(unsigned int size){
 				temp++;
 				if(temp == required_pages){
 					uint32 va = ((uint32)hardLimit + PAGE_SIZE*(start+1));
-					acquire_spinlock(&MemFrameLists.mfllock);
 					if(allocateMapFrame(va,va+(PAGE_SIZE*required_pages)) == E_NO_MEM){
+						release_spinlock(&MemFrameLists.mfllock);
 						return NULL;
 					}
-					release_spinlock(&MemFrameLists.mfllock);
 					if(start == it)
 						it = start + required_pages;
 					pageStatus[start] = required_pages;
+					release_spinlock(&MemFrameLists.mfllock);
 					return (void*)va;
 				}
 			}
 		}
+		release_spinlock(&MemFrameLists.mfllock);
 		return NULL;
 	}
-	else
+	else{
+		release_spinlock(&MemFrameLists.mfllock);
 		return alloc_block_FF(size);
+	}
+
 }
 
 
@@ -150,10 +158,12 @@ void kfree(void* virtual_address)
 
 	//you need to get the size of the given allocation using its address
 	//refer to the project presentation and documentation for details
+	acquire_spinlock(&MemFrameLists.mfllock);
 	uint32 va = (uint32) virtual_address;
 	if (va>=KERNEL_HEAP_START && va< (uint32)hardLimit)//HARD_LIMIT should be declared in initialize
 	{
 		free_block((void*)va);
+		release_spinlock(&MemFrameLists.mfllock);
 		return;
 	}
 	uint32 vaRoundDown = ROUNDDOWN(va,PAGE_SIZE);
@@ -166,27 +176,30 @@ void kfree(void* virtual_address)
 	// Pages Range
 	if(va>=((uint32)hardLimit + PAGE_SIZE)&&va<KERNEL_HEAP_MAX)
 	{
-		acquire_spinlock(&MemFrameLists.mfllock);
+
 		for(int i = 0;i < pages;i++){
 			uint32 *ptr_page_table = NULL;
 			struct FrameInfo *free_frame = get_frame_info(ptr_page_directory, va, &ptr_page_table);
 
 			if(free_frame == NULL) // Frame is free
 			{
+				release_spinlock(&MemFrameLists.mfllock);
 				return;
 			}
 			unmap_frame(ptr_page_directory, va);
 			va+=PAGE_SIZE;
 	    	phys_to_virt[FRAME_NUMBER(to_physical_address(free_frame))] = -1;
 		}
-		release_spinlock(&MemFrameLists.mfllock);
+
 	}
 
 	//Invalid address
 	else
 	{
+		release_spinlock(&MemFrameLists.mfllock);
 		panic("failed to free address %x, illegal address", va);
 	}
+	release_spinlock(&MemFrameLists.mfllock);
 
 }
 
