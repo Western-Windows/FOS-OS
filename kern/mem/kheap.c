@@ -269,6 +269,12 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		uint32 new_size_pages = size/PAGE_SIZE;
 		uint32 rem = new_size_pages - pages;
 		uint32 check = start_index + pages;
+		if((check+rem)>=statusLimit)
+		{
+			void* va = kmalloc(new_size);
+			kfree(virtual_address);
+			return va;
+		}
 		for(int i = check; i < check+rem;i++){
 			if(~pageStatus[i]){
 				void* va = kmalloc(new_size);
