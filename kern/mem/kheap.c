@@ -278,6 +278,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		for(int i = check; i < check+rem;i++){
 			if(~pageStatus[i]){
 				void* va = kmalloc(new_size);
+				memcpy(va,virtual_address,old_size);
 				kfree(virtual_address);
 				return va;
 			}
