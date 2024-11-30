@@ -21,8 +21,6 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 	//TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - initialize_kheap_dynamic_allocator
 	// Write your code here, remove the panic and write your code
 	//panic("initialize_kheap_dynamic_allocator() is not implemented yet...!!");
-
-    acquire_spinlock(&MemFrameLists.mfllock);
 	init();
 
 	start = (uint32*) daStart;  // Dynamic allocation start address.
@@ -47,8 +45,6 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
     initialize_dynamic_allocator(daStart, initSizeToAllocate);
 
     freePageStatus(0,32767);
-
-    release_spinlock(&MemFrameLists.mfllock);
     return 0;  // Successful initialization.
 }
 
@@ -69,9 +65,7 @@ void* sbrk(int numOfPages)
 	//====================================================
 
 	//TODO: [PROJECT'24.MS2 - #02] [1] KERNEL HEAP - sbrk
-	acquire_spinlock(&MemFrameLists.mfllock);
 	if (numOfPages == 0) {
-		release_spinlock(&MemFrameLists.mfllock);
 		return segmentBreak;
 	}
 	uint32 available_size = (uint32)hardLimit - (uint32)segmentBreak;
@@ -81,7 +75,6 @@ void* sbrk(int numOfPages)
 	void* return_address = segmentBreak;
 	//check if number of pages needed exceeds number of pages available
 	if (available_pages < numOfPages) {
-		release_spinlock(&MemFrameLists.mfllock);
 		return (void *) -1;
 	}
 	segmentBreak = (uint32*)((char*)segmentBreak + size_added);
@@ -90,19 +83,16 @@ void* sbrk(int numOfPages)
 	void* givenRange = segmentBreak;
 	if (allocateMapFrame((uint32)currentAddress,(uint32)givenRange) == E_NO_MEM)
 	{
-		release_spinlock(&MemFrameLists.mfllock);
 		return (void *) -1;
 	}
 	uint32* segmentBreak_in_uint32 = (uint32*)segmentBreak;
 	uint32* new_end_block = segmentBreak_in_uint32 - 1;
 	*new_end_block = 1;
-	release_spinlock(&MemFrameLists.mfllock);
 	return return_address;
 	// Write your code here, remove the panic and write your code
 }
 //TODO: [PROJECT'24.MS2 - BONUS#2] [1] KERNEL HEAP - Fast Page Allocator
 void* kmalloc(unsigned int size){
-	acquire_spinlock(&MemFrameLists.mfllock);
 	if(isKHeapPlacementStrategyFIRSTFIT() == 0){
 		setKHeapPlacementStrategyFIRSTFIT();
 	}
@@ -128,22 +118,18 @@ void* kmalloc(unsigned int size){
 				if(temp == required_pages){
 					uint32 va = ((uint32)hardLimit + PAGE_SIZE*(start+1));
 					if(allocateMapFrame(va,va+(PAGE_SIZE*required_pages)) == E_NO_MEM){
-						release_spinlock(&MemFrameLists.mfllock);
 						return NULL;
 					}
 					if(start == it)
 						it = start + required_pages;
 					pageStatus[start] = required_pages;
-					release_spinlock(&MemFrameLists.mfllock);
 					return (void*)va;
 				}
 			}
 		}
-		release_spinlock(&MemFrameLists.mfllock);
 		return NULL;
 	}
 	else{
-		release_spinlock(&MemFrameLists.mfllock);
 		return alloc_block_FF(size);
 	}
 
@@ -158,12 +144,10 @@ void kfree(void* virtual_address)
 
 	//you need to get the size of the given allocation using its address
 	//refer to the project presentation and documentation for details
-	acquire_spinlock(&MemFrameLists.mfllock);
 	uint32 va = (uint32) virtual_address;
 	if (va>=KERNEL_HEAP_START && va< (uint32)hardLimit)//HARD_LIMIT should be declared in initialize
 	{
 		free_block((void*)va);
-		release_spinlock(&MemFrameLists.mfllock);
 		return;
 	}
 	uint32 vaRoundDown = ROUNDDOWN(va,PAGE_SIZE);
@@ -183,7 +167,6 @@ void kfree(void* virtual_address)
 
 			if(free_frame == NULL) // Frame is free
 			{
-				release_spinlock(&MemFrameLists.mfllock);
 				return;
 			}
 			unmap_frame(ptr_page_directory, va);
@@ -196,10 +179,8 @@ void kfree(void* virtual_address)
 	//Invalid address
 	else
 	{
-		release_spinlock(&MemFrameLists.mfllock);
 		panic("failed to free address %x, illegal address", va);
 	}
-	release_spinlock(&MemFrameLists.mfllock);
 
 }
 
@@ -213,13 +194,11 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 	//refer to the project presentation and documentation for details
 
 	//EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED ==================
-	acquire_spinlock(&MemFrameLists.mfllock);
 	uint32 *temp = NULL;
 	struct FrameInfo *ans = get_frame_info(ptr_page_directory, virtual_address, &temp);
-	if (ans == NULL){ release_spinlock(&MemFrameLists.mfllock); return 0;}
+	if (ans == NULL){ return 0;}
 	uint32 pg = to_physical_address(ans);
 	uint32 off = virtual_address & 0xFFF;
-	release_spinlock(&MemFrameLists.mfllock);
 	return pg | off;
 }
 
@@ -233,10 +212,8 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 	//refer to the project presentation and documentation for details
 
 	//EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED ==================
-	acquire_spinlock(&MemFrameLists.mfllock);
 	if ( phys_to_virt[FRAME_NUMBER(physical_address)] == -1) return 0;
 	uint32 off = physical_address & 0xFFF;
-	release_spinlock(&MemFrameLists.mfllock);
 	return phys_to_virt[FRAME_NUMBER(physical_address)] + off;
 }
 //=================================================================================//
@@ -258,27 +235,21 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	//TODO: [PROJECT'24.MS2 - BONUS#1] [1] KERNEL HEAP - krealloc
 	// Write your code here, remove the panic and write your code
 
-	acquire_spinlock(&MemFrameLists.mfllock);
 	if(virtual_address==NULL && new_size){
-		release_spinlock(&MemFrameLists.mfllock);
 		return kmalloc(new_size);
 	}
 	if(virtual_address==NULL && (new_size==0)){
-		release_spinlock(&MemFrameLists.mfllock);
 		return NULL;
 	}
 	if((new_size==0)){
 		kfree(virtual_address);
-		release_spinlock(&MemFrameLists.mfllock);
 		return NULL;
 	}
 	if(virtual_address < (hardLimit)){
 		if(new_size <= DYN_ALLOC_MAX_BLOCK_SIZE){
-			release_spinlock(&MemFrameLists.mfllock);
 			return realloc_block_FF(virtual_address,new_size);
 		}
 		kfree(virtual_address);
-		release_spinlock(&MemFrameLists.mfllock);
 		return kmalloc(new_size);
 	}
 	uint32 vaRoundDown = ROUNDDOWN((uint32)virtual_address,PAGE_SIZE);
@@ -291,18 +262,15 @@ void *krealloc(void *virtual_address, uint32 new_size)
 			void* tmpva = realloc_block_FF(NULL,new_size);
 			pageStatus[start_index] = -1;
 			kfree(virtual_address);
-			release_spinlock(&MemFrameLists.mfllock);
 			return tmpva;
 		}
 		pageStatus[start_index] = size/PAGE_SIZE;
 		void* x = (void*)ROUNDUP(((vaRoundDown+new_size)),PAGE_SIZE);
 		kfree(x);
-		release_spinlock(&MemFrameLists.mfllock);
 		return virtual_address;
 	}
 	if(old_size == size)
 	{
-		release_spinlock(&MemFrameLists.mfllock);
 		return virtual_address;
 
 	}
@@ -315,7 +283,6 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		if(va!=NULL)
 			memcpy(va,virtual_address,old_size);
 		kfree(virtual_address);
-		release_spinlock(&MemFrameLists.mfllock);
 		return va;
 	}
 	for(int i = check; i < (check+rem);i++){
@@ -324,7 +291,6 @@ void *krealloc(void *virtual_address, uint32 new_size)
 			if(va!=NULL)
 				memcpy(va,virtual_address,old_size);
 			kfree(virtual_address);
-			release_spinlock(&MemFrameLists.mfllock);
 			return va;
 		}
 	}
@@ -332,7 +298,6 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	uint32 limit = ((uint32)((char*)hardLimit+(PAGE_SIZE*(check+rem))));
 	allocateMapFrame(startVa , limit);
 	pageStatus[start_index] = size/PAGE_SIZE;
-	release_spinlock(&MemFrameLists.mfllock);
 	return virtual_address;
 }
 
@@ -340,6 +305,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 
 int allocateMapFrame(uint32 currentAddress , uint32 limit)
 {
+	acquire_spinlock(&MemFrameLists.mfllock);
     while (currentAddress < limit)
     {
     	// Allocation of frames in memory.
@@ -347,6 +313,7 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit)
     	int allocateResult = allocate_frame(&frame);
     	if (allocateResult == E_NO_MEM)
 		{
+    		release_spinlock(&MemFrameLists.mfllock);
 			return E_NO_MEM;
 		}
 
@@ -358,10 +325,12 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit)
     	if (allocateResult == E_NO_MEM)
     	{
 			free_frame(frame);
+			release_spinlock(&MemFrameLists.mfllock);
             return E_NO_MEM;
     	}
     	currentAddress += PAGE_SIZE;
     }
+    release_spinlock(&MemFrameLists.mfllock);
     return 0;
 }
 
