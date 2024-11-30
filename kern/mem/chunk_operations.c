@@ -222,8 +222,10 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 		struct WorkingSetElement* lasts = e->page_last_WS_element;
 		if (lasts == NULL)
 		{
+//			cprintf("DA5lT NULL\n");
 			return;
 		}else{
+//			cprintf("DA5lT SAFE\n");
 			struct WorkingSetElement* last = e->page_last_WS_element;
 			struct WorkingSetElement* first = e->page_WS_list.lh_first;
 			if (first != last)
