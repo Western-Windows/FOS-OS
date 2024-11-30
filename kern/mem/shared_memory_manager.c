@@ -187,7 +187,6 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 			release_spinlock(&AllShares.shareslock);
 			return E_NO_SHARE;
 		}
-
 		// Mapping of frames.
 		map_frame(myenv->env_page_directory, frame, currentAddress, PERM_WRITEABLE|PERM_PRESENT|PERM_USER);
 		if (allocateResult == E_NO_MEM)
@@ -262,16 +261,12 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 //it should free its framesStorage and the share object itself
 void free_share(struct Share* ptrShare)
 {
-	//TODO: [PROJECT'24.MS2 - BONUS#4] [4] SHARED MEMORY [KERNEL SIDE] - free_share()
-	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	//panic("free_share is not implemented yet");
-	//Your Code is Here...
-	acquire_spinlock(&AllShares.shareslock);
-	LIST_REMOVE(&AllShares.shares_list, ptrShare);
-	release_spinlock(&AllShares.shareslock);
-	kfree(ptrShare->framesStorage);
-	kfree(ptrShare);
 
+	kfree(ptrShare->framesStorage);
+	acquire_spinlock(&AllShares.shareslock);
+	LIST_REMOVE(&AllShares.shares_list,ptrShare);
+	release_spinlock(&AllShares.shareslock);
+	kfree(ptrShare);
 }
 //========================
 // [B2] Free Share Object:
@@ -282,39 +277,70 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
 	//panic("freeSharedObject is not implemented yet");
 	//Your Code is Here...
-	struct Share * it = NULL;
-	bool found = 0;
-	acquire_spinlock(&AllShares.shareslock);
-	LIST_FOREACH (it, &AllShares.shares_list)
-	{
-		if (it->ID == sharedObjectID)
-		{
-			found = 1;
-			break;
-		}
-	}
-	release_spinlock(&AllShares.shareslock);
-	if (!found){
-		return E_SHARED_MEM_NOT_EXISTS;
-	}
-	else{
 		struct Env* myenv = get_cpu_proc();
-		uint32 va = (uint32)startVA;
-		for (uint32 i = va; i < va + it->size; i += PAGE_SIZE){
-			unmap_frame(myenv->env_page_directory,i);
-//			uint32 *ptr;
-//			get_page_table(myenv->env_page_directory,i,&ptr);
-//			pt_clear_page_table_entry(myenv->env_page_directory, i);
-//			uint32 ret = pd_is_table_used(myenv->env_page_directory, i);
-//			if (ret == 0){
-//				pd_clear_page_dir_entry(myenv->env_page_directory, (uint32)ptr);
-//			}
+	    struct Share *share = NULL;
+	    uint32 *ptr_page_table = NULL;
+	    struct FrameInfo *frame = get_frame_info(myenv->env_page_directory,(uint32)startVA,&ptr_page_table);
+		if(sharedObjectID == -1){
+			bool flag = 1;
+			acquire_spinlock(&AllShares.shareslock);
+			LIST_FOREACH(share, &AllShares.shares_list) {
+			        if (share->framesStorage == NULL) {
+			            continue;
+			        }
+
+			        for (int i = 0; i < (share->size/PAGE_SIZE); i++) {
+			            if (share->framesStorage[i] == frame) {
+			                sharedObjectID = share->ID;
+			                flag= 0;
+			                break;
+			            }
+			        }
+			        if(flag == 0){
+			        	break;
+			        }
+			   }
+			release_spinlock(&AllShares.shareslock);
+
 		}
-		it->references--;
-		if (it->references-- <= 0){
-			free_share(it);
+		if (sharedObjectID == -1) {
+			return E_SHARED_MEM_NOT_EXISTS;
 		}
-		tlbflush();
-		return 0;
-	}
+		uint32 virtual_address = (uint32)startVA;
+	    uint32 va = ROUNDDOWN(virtual_address, PAGE_SIZE);
+	    uint32 end_va = ROUNDUP(virtual_address + share->size, PAGE_SIZE);
+	    for (uint32 i = va; i < end_va; i += PAGE_SIZE) {
+	        unmap_frame(myenv->env_page_directory, i);
+	    }
+	    bool empty = 1;
+	    uint32 start_table_va = ROUNDDOWN(va, PAGE_SIZE<<10);
+	    uint32 end_table_va = ROUNDUP(end_va, PAGE_SIZE <<10);
+	    for (uint32 va = start_table_va; va < end_table_va; va += PAGE_SIZE<<10) {
+	        uint32 *page_table = NULL;
+	        if (get_page_table(myenv->env_page_directory, va, &page_table) == TABLE_NOT_EXIST) {
+	        //	cprintf("NO TABLE EXISTS\n");
+	            continue;
+	        }
+	        for (int i = 0; i < NPTENTRIES; i++) {
+	            if (page_table[i] != 0) {
+	          //  	cprintf("EMPTY TABLE\n");
+	                empty = 0;
+	                break;
+	            }
+	        }
+	        if (empty) {
+	        	//cprintf("EMPTY = 1 \n");
+	            kfree(page_table);
+	            pd_clear_page_dir_entry(myenv->env_page_directory, va);
+	        }
+	        empty = 1;
+	    }
+	    share->references--;
+	    if (share->references == 0) {
+	   // 	cprintf("FREE SHARE CALLED\n");
+	    	free_share(share);
+	    }
+	    tlbflush();
+
+	    return 0;
 }

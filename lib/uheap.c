@@ -256,9 +256,7 @@ void sfree(void* virtual_address)
 	//TODO: [PROJECT'24.MS2 - BONUS#4] [4] SHARED MEMORY [USER SIDE] - sfree()
 	// Write your code here, remove the panic and write your code
 	//panic("sfree() is not implemented yet...!!");
-	uint32 id = (uint32)virtual_address;
-	id &= 0x7FFFFFFF;
-	sys_freeSharedObject(id, virtual_address);
+	sys_freeSharedObject(-1,virtual_address);
 }
 
 
