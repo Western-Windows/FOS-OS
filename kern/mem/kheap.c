@@ -8,7 +8,11 @@
 #define RAM_SIZE 0x100000000
 #define TOTAL_FRAMES (RAM_SIZE / PAGE_SIZE)
 int phys_to_virt[TOTAL_FRAMES];
-int pageStatus[32766];
+
+struct {
+	int pageStatus[32766];
+	struct spinlock mfplock;
+}put;//page utilities
 int it = 0;
 //Initialize the dynamic allocator of kernel heap with the given start address, size & limit
 //All pages in the given range should be allocated
@@ -43,8 +47,9 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 		panic("No physical memory available for page table.");  // No memory.
 	}
     initialize_dynamic_allocator(daStart, initSizeToAllocate);
-
+    acquire_spinlock(&put.mfplock);
     freePageStatus(0,32767);
+    release_spinlock(&put.mfplock);
     return 0;  // Successful initialization.
 }
 
@@ -99,18 +104,19 @@ void* kmalloc(unsigned int size){
 	if(size > DYN_ALLOC_MAX_BLOCK_SIZE){
 		uint32 required_pages = ROUNDUP(size,PAGE_SIZE)>>12;
 		int start=-1,temp = 0;
+		acquire_spinlock(&put.mfplock);
 		for(int i = it; i < statusLimit;i++){
-			if(~pageStatus[i]){
+			if(~put.pageStatus[i]){
 				if(~start){
 					start = -1;
 					temp = 0;
 				}
 				do{
-					i+=(pageStatus[i]);
-				}while((i < statusLimit) && (~pageStatus[i]));
+					i+=(put.pageStatus[i]);
+				}while((i < statusLimit) && (~put.pageStatus[i]));
 
 			}
-			if((i < statusLimit) &&pageStatus[i]==-1){
+			if((i < statusLimit) &&put.pageStatus[i]==-1){
 				if(start==-1){
 					start = i;
 				}
@@ -118,15 +124,18 @@ void* kmalloc(unsigned int size){
 				if(temp == required_pages){
 					uint32 va = ((uint32)hardLimit + PAGE_SIZE*(start+1));
 					if(allocateMapFrame(va,va+(PAGE_SIZE*required_pages)) == E_NO_MEM){
+						release_spinlock(&put.mfplock);
 						return NULL;
 					}
 					if(start == it)
 						it = start + required_pages;
-					pageStatus[start] = required_pages;
+					put.pageStatus[start] = required_pages;
+					release_spinlock(&put.mfplock);
 					return (void*)va;
 				}
 			}
 		}
+		release_spinlock(&put.mfplock);
 		return NULL;
 	}
 	else{
@@ -152,15 +161,17 @@ void kfree(void* virtual_address)
 	}
 	uint32 vaRoundDown = ROUNDDOWN(va,PAGE_SIZE);
 	uint32  startIndex= (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))>>12;
-	int pages = pageStatus[startIndex];
+	acquire_spinlock(&put.mfplock);
+	int pages = put.pageStatus[startIndex];
 	if(startIndex < it)
 		it = startIndex;
-	pageStatus[startIndex] = -1;
+	put.pageStatus[startIndex] = -1;
+	release_spinlock(&put.mfplock);
 //	freePageStatus(startIndex,pages);
 	// Pages Range
 	if(va>=((uint32)hardLimit + PAGE_SIZE)&&va<KERNEL_HEAP_MAX)
 	{
-
+		acquire_spinlock(&MemFrameLists.mfllock);
 		for(int i = 0;i < pages;i++){
 			uint32 *ptr_page_table = NULL;
 			struct FrameInfo *free_frame = get_frame_info(ptr_page_directory, va, &ptr_page_table);
@@ -173,6 +184,7 @@ void kfree(void* virtual_address)
 			va+=PAGE_SIZE;
 	    	phys_to_virt[FRAME_NUMBER(to_physical_address(free_frame))] = -1;
 		}
+		release_spinlock(&MemFrameLists.mfllock);
 
 	}
 
@@ -254,17 +266,23 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	}
 	uint32 vaRoundDown = ROUNDDOWN((uint32)virtual_address,PAGE_SIZE);
 	uint32 start_index = (uint32)((vaRoundDown - (uint32)((char*)hardLimit+PAGE_SIZE)))>>12;
-	int pages = pageStatus[start_index];
+	acquire_spinlock(&put.mfplock);
+	int pages = put.pageStatus[start_index];
+	release_spinlock(&put.mfplock);
 	int old_size = pages*PAGE_SIZE;
 	uint32 size = ROUNDUP(new_size,PAGE_SIZE);
 	if(new_size<old_size){
 		if(new_size<=DYN_ALLOC_MAX_BLOCK_SIZE) {
 			void* tmpva = realloc_block_FF(NULL,new_size);
-			pageStatus[start_index] = -1;
+			acquire_spinlock(&put.mfplock);
+			put.pageStatus[start_index] = -1;
+			release_spinlock(&put.mfplock);
 			kfree(virtual_address);
 			return tmpva;
 		}
-		pageStatus[start_index] = size/PAGE_SIZE;
+		acquire_spinlock(&put.mfplock);
+		put.pageStatus[start_index] = size/PAGE_SIZE;
+		release_spinlock(&put.mfplock);
 		void* x = (void*)ROUNDUP(((vaRoundDown+new_size)),PAGE_SIZE);
 		kfree(x);
 		return virtual_address;
@@ -286,18 +304,23 @@ void *krealloc(void *virtual_address, uint32 new_size)
 		return va;
 	}
 	for(int i = check; i < (check+rem);i++){
-		if(~pageStatus[i]){
+		acquire_spinlock(&put.mfplock);
+		if(~put.pageStatus[i]){
+			release_spinlock(&put.mfplock);
 			void* va = kmalloc(new_size);
 			if(va!=NULL)
 				memcpy(va,virtual_address,old_size);
 			kfree(virtual_address);
 			return va;
 		}
+		release_spinlock(&put.mfplock);
 	}
 	uint32 startVa = ((uint32)((char*)hardLimit+(PAGE_SIZE*(check+1))));
 	uint32 limit = ((uint32)((char*)hardLimit+(PAGE_SIZE*(check+rem))));
 	allocateMapFrame(startVa , limit);
-	pageStatus[start_index] = size/PAGE_SIZE;
+	acquire_spinlock(&put.mfplock);
+	put.pageStatus[start_index] = size/PAGE_SIZE;
+	release_spinlock(&put.mfplock);
 	return virtual_address;
 }
 
@@ -336,7 +359,7 @@ int allocateMapFrame(uint32 currentAddress , uint32 limit)
 
 void freePageStatus(int index,int size){
 	for(int i = index; i < index+size;i++){
-		pageStatus[i] = -1;
+		put.pageStatus[i] = -1;
 	}
 }
 
