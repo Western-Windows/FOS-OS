@@ -11,27 +11,25 @@ struct semaphore create_semaphore(char *semaphoreName, uint32 value)
 	//Your Code is Here...
 
 	// Create shared object
-	void* va = smalloc(semaphoreName, sizeof(struct semaphore), 1);
+
+	void* va = smalloc(semaphoreName, sizeof(struct __semdata), 1);
 	if (va == NULL)
 	{
 		return NULL;
 	}
-	struct semaphore* sem = (struct semaphore*) va;
+	struct __semdata* sem = (struct __semdata*) va;
 
 	// Initialize semaphore data
-	for (int i = 0; i < sizeof(semaphoreName) / sizeof(int); i++)
-	{
-		sem->semdata->name[i] = semaphoreName[i];
-	}
-	sem->semdata->count=value;
-	sem->semdata->lock=0;
+	strlcpy(sem->name, semaphoreName, sizeof(sem->name));
+	sem->count=value;
+	sem->lock=0;
+	LIST_INIT(&(sem->queue));
 
-	if(&(sem->semdata->queue) != NULL)
-	{
-		LIST_INIT(&(sem->semdata->queue));
-	}
+	// Create wrapper
+	struct semaphore main_semaphore;
+	main_semaphore.semdata = sem;
 
-	return *sem;
+	return main_semaphore;
 }
 
 struct semaphore get_semaphore(int32 ownerEnvID, char* semaphoreName)
