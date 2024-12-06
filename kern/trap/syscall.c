@@ -359,7 +359,34 @@ void sys_set_uheap_strategy(uint32 heapStrategy)
 /* SEMAPHORES SYSTEM CALLS */
 /*******************************/
 //[PROJECT'24.MS3] ADD SUITABLE CODE HERE
+void sys_sem_wait(struct semaphore *sem)
+{
+	//Should acquire the lock here
 
+	sem->semdata->count--;
+	if (sem->semdata->count < 0)
+	{
+		struct Env* myenv = get_cpu_proc();
+		enqueue(&(sem->semdata->queue), myenv);
+		//Should implement a sleep like function (I'm not sure)
+
+	}
+	//Should release the lock here
+
+}
+void sys_sem_signal(struct semaphore *sem)
+{
+	//Should acquire the lock here
+
+	sem->semdata->count++;
+	if (sem->semdata->count <= 0)
+	{
+		struct Env *myenv = dequeue(&(sem->semdata->queue));
+		sched_insert_ready(myenv);
+	}
+	//Should release the lock here
+
+}
 
 /*******************************/
 /* SHARED MEMORY SYSTEM CALLS */

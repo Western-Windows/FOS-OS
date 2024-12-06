@@ -63,16 +63,21 @@ void wait_semaphore(struct semaphore sem)
 {
 	//TODO: [PROJECT'24.MS3 - #04] [2] USER-LEVEL SEMAPHORE - wait_semaphore
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("wait_semaphore is not implemented yet");
+	//panic("wait_semaphore is not implemented yet");
 	//Your Code is Here...
+//	uint32* semp = (uint32 *)sem.semdata->lock;
+//	while(xchg(&(sem.semdata->lock), 1) != 0);
+	sys_sem_signal(&sem);
 }
 
 void signal_semaphore(struct semaphore sem)
 {
 	//TODO: [PROJECT'24.MS3 - #05] [2] USER-LEVEL SEMAPHORE - signal_semaphore
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("signal_semaphore is not implemented yet");
+	//panic("signal_semaphore is not implemented yet");
 	//Your Code is Here...
+//	struct semaphore *semPtr = &sem;
+	sys_sem_wait(&sem);
 }
 
 int semaphore_count(struct semaphore sem)
