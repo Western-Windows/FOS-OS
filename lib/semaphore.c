@@ -10,12 +10,15 @@ struct semaphore create_semaphore(char *semaphoreName, uint32 value)
 	//panic("create_semaphore is not implemented yet");
 	//Your Code is Here...
 
-	// Create shared object
+	// Create wrapper
+	struct semaphore main_semaphore;
+	main_semaphore.semdata = NULL;
 
+	// Create shared object
 	void* va = smalloc(semaphoreName, sizeof(struct __semdata), 1);
 	if (va == NULL)
 	{
-		return NULL;
+		return main_semaphore;
 	}
 	struct __semdata* sem = (struct __semdata*) va;
 
@@ -25,8 +28,7 @@ struct semaphore create_semaphore(char *semaphoreName, uint32 value)
 	sem->lock=0;
 	LIST_INIT(&(sem->queue));
 
-	// Create wrapper
-	struct semaphore main_semaphore;
+	// Populate wrapper
 	main_semaphore.semdata = sem;
 
 	return main_semaphore;
@@ -36,8 +38,25 @@ struct semaphore get_semaphore(int32 ownerEnvID, char* semaphoreName)
 {
 	//TODO: [PROJECT'24.MS3 - #03] [2] USER-LEVEL SEMAPHORE - get_semaphore
 	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	panic("get_semaphore is not implemented yet");
+	//panic("get_semaphore is not implemented yet");
 	//Your Code is Here...
+
+	// Create wrapper
+	struct semaphore main_semaphore;
+	main_semaphore.semdata = NULL;
+
+	// Get shared object
+	void* va = sget(ownerEnvID, semaphoreName);
+	if (va == NULL)
+	{
+		return main_semaphore;
+	}
+	struct __semdata* sem = (struct __semdata*) va;
+
+	// Populate wrapper
+	main_semaphore.semdata = sem;
+
+	return main_semaphore;
 }
 
 void wait_semaphore(struct semaphore sem)
