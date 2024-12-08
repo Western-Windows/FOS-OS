@@ -250,8 +250,8 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 	//Your code is here
 	num_of_ready_queues = numOfPriorities;
 	starvation_threshold = starvThresh;
-
 	sched_delete_ready_queues();
+	acquire_spinlock(&ProcessQueues.qlock);
 	ProcessQueues.env_ready_queues = kmalloc(sizeof(struct Env_Queue) * num_of_ready_queues);
 	quantums = kmalloc(num_of_ready_queues * sizeof(uint8));
 	kclock_set_quantum(quantum);
@@ -259,6 +259,7 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 		init_queue(&(ProcessQueues.env_ready_queues[i]));
 		quantums[i] = quantum;
 	}
+	release_spinlock(&ProcessQueues.qlock);
 	//=========================================
 	//DON'T CHANGE THESE LINES=================
 	uint16 cnt0 = kclock_read_cnt0_latch() ; //read after write to ensure it's set to the desired value
@@ -349,9 +350,21 @@ struct Env* fos_scheduler_PRIRR()
 	/****************************************************************************************/
 	//TODO: [PROJECT'24.MS3 - #08] [3] PRIORITY RR Scheduler - fos_scheduler_PRIRR
 	//Your code is here
-
-	//Comment the following line
-	panic("Not implemented yet");
+	struct Env *cur = get_cpu_proc();
+	acquire_spinlock(&ProcessQueues.qlock);
+	if(cur!=NULL)
+		sched_insert_ready(cur);
+	for (int i = 0;i < num_of_ready_queues;i++) {
+		if(ProcessQueues.env_ready_queues[i].size!=0){
+			struct Env *ans = dequeue(&(ProcessQueues.env_ready_queues[i]));
+			kclock_set_quantum(quantums[i]);
+			release_spinlock(&ProcessQueues.qlock);
+			return ans;
+		}
+	}
+	kclock_set_quantum(quantums[0]);
+	release_spinlock(&ProcessQueues.qlock);
+	return NULL;
 }
 
 //========================================
@@ -365,8 +378,12 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		//TODO: [PROJECT'24.MS3 - #09] [3] PRIORITY RR Scheduler - clock_interrupt_handler
 		//Your code is here
 		//Comment the following line
-		//panic("Not implemented yet");
-
+//		for(int = num_of_ready_queues; i >= 0;i--){
+//			for(int j = 0; j < ProcessQueues.env_ready_queues[i].size;j++){
+//				struct Env *cur = ProcessQueues.env_ready_queues[i][j];
+//				if(timer_ticks()>)
+//			}
+//		}
 	}
 
 
