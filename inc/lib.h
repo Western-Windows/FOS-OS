@@ -49,6 +49,7 @@ int32	sys_getenvindex(void);
 int32	sys_getenvid(void);
 int32	sys_getparentenvid(void);
 void 	sys_exit_env();
+void    sys_set_env_priority(int envId,int priority);
 //2016. Edited @ 2018 @2020 to add secondlist size for LRU list approximation
 int 	sys_create_env(char* programName, unsigned int page_WS_size,unsigned int LRU_second_list_size,unsigned int percent_WS_pages_to_remove);
 int		sys_destroy_env(int32 envId);

@@ -248,17 +248,17 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 {
 	//TODO: [PROJECT'24.MS3 - #07] [3] PRIORITY RR Scheduler - sched_init_PRIRR
 	//Your code is here
-	//Comment the following line
-	panic("Not implemented yet");
+	num_of_ready_queues = numOfPriorities;
+	starvation_threshold = starvThresh;
 
-
-
-
-
-
-
-
-
+	sched_delete_ready_queues();
+	ProcessQueues.env_ready_queues = kmalloc(sizeof(struct Env_Queue) * num_of_ready_queues);
+	quantums = kmalloc(num_of_ready_queues * sizeof(uint8));
+	kclock_set_quantum(quantum);
+	for (int i = 0;i < numOfPriorities;i++) {
+		init_queue(&(ProcessQueues.env_ready_queues[i]));
+		quantums[i] = quantum;
+	}
 	//=========================================
 	//DON'T CHANGE THESE LINES=================
 	uint16 cnt0 = kclock_read_cnt0_latch() ; //read after write to ensure it's set to the desired value
@@ -349,6 +349,7 @@ struct Env* fos_scheduler_PRIRR()
 	/****************************************************************************************/
 	//TODO: [PROJECT'24.MS3 - #08] [3] PRIORITY RR Scheduler - fos_scheduler_PRIRR
 	//Your code is here
+
 	//Comment the following line
 	panic("Not implemented yet");
 }
@@ -364,9 +365,9 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		//TODO: [PROJECT'24.MS3 - #09] [3] PRIORITY RR Scheduler - clock_interrupt_handler
 		//Your code is here
 		//Comment the following line
-		panic("Not implemented yet");
-	}
+		//panic("Not implemented yet");
 
+	}
 
 
 	/********DON'T CHANGE THESE LINES***********/
