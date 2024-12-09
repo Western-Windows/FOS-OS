@@ -21,6 +21,7 @@
 
 extern uint8 bypassInstrLength ;
 struct Env* cur_env ;
+struct spinlock guardSpinLock;
 /*******************************/
 /* STRING I/O SYSTEM CALLS */
 /*******************************/
@@ -175,6 +176,7 @@ static int __sys_allocate_page(void *va, int perm)
 
 		//return it to the original status
 		ptr_frame_info->references -= 1;
+		init_spinlock(&guardSpinLock, "Semaphore spin lock");
 	}
 #else
 	{
@@ -359,25 +361,30 @@ void sys_set_uheap_strategy(uint32 heapStrategy)
 /* SEMAPHORES SYSTEM CALLS */
 /*******************************/
 //[PROJECT'24.MS3] ADD SUITABLE CODE HERE
+
 void sys_sem_wait(struct semaphore *sem)
 {
 	//Should acquire the lock here
-
+	acquire_spinlock(&guardSpinLock);
+	sem->semdata->lock = 1;
 	sem->semdata->count--;
 	if (sem->semdata->count < 0)
 	{
 		struct Env* myenv = get_cpu_proc();
 		enqueue(&(sem->semdata->queue), myenv);
 		//Should implement a sleep like function (I'm not sure)
+		sleep_sem(&guardSpinLock);
 
 	}
 	//Should release the lock here
-
+	sem->semdata->lock = 0;
+	release_spinlock(&guardSpinLock);
 }
 void sys_sem_signal(struct semaphore *sem)
 {
 	//Should acquire the lock here
-
+	acquire_spinlock(&guardSpinLock);
+	sem->semdata->lock = 1;
 	sem->semdata->count++;
 	if (sem->semdata->count <= 0)
 	{
@@ -385,7 +392,8 @@ void sys_sem_signal(struct semaphore *sem)
 		sched_insert_ready(myenv);
 	}
 	//Should release the lock here
-
+	sem->semdata->lock = 0;
+	release_spinlock(&guardSpinLock);
 }
 
 /*******************************/

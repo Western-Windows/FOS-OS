@@ -23,7 +23,7 @@ struct semaphore create_semaphore(char *semaphoreName, uint32 value)
 	struct __semdata* sem = (struct __semdata*) va;
 
 	// Initialize semaphore data
-	strlcpy(sem->name, semaphoreName, sizeof(sem->name));
+	strcpy(sem->name, semaphoreName);
 	sem->count=value;
 	sem->lock=0;
 	LIST_INIT(&(sem->queue));
