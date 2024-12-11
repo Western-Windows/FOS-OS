@@ -258,6 +258,10 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 	for (int i = 0;i < numOfPriorities;i++) {
 		init_queue(&(ProcessQueues.env_ready_queues[i]));
 		quantums[i] = quantum;
+		struct Env *cur ;
+		LIST_FOREACH(cur, &ProcessQueues.env_ready_queues[i]){
+			cur->clock_timer = 0;
+		}
 	}
 	release_spinlock(&ProcessQueues.qlock);
 	//=========================================
@@ -378,12 +382,18 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		//TODO: [PROJECT'24.MS3 - #09] [3] PRIORITY RR Scheduler - clock_interrupt_handler
 		//Your code is here
 		//Comment the following line
-//		for(int = num_of_ready_queues; i >= 0;i--){
-//			for(int j = 0; j < ProcessQueues.env_ready_queues[i].size;j++){
-//				struct Env *cur = ProcessQueues.env_ready_queues[i][j];
-//				if(timer_ticks()>)
-//			}
-//		}
+		for(int i = num_of_ready_queues; i >= 0;i--){
+			struct Env *cur ;
+			LIST_FOREACH(cur, &ProcessQueues.env_ready_queues[i]){
+				cur->clock_timer++;
+				if(cur->clock_timer>=starvation_threshold){
+					sched_remove_ready(cur);
+					if(cur->priority)
+						cur->priority--;
+					sched_insert_ready(cur);
+				}
+			}
+		}
 	}
 
 
