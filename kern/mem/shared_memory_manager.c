@@ -154,8 +154,10 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 	struct Env* myenv = get_cpu_proc(); //The calling environment
 
 	struct Share* isExistingObject = get_share(ownerID,shareName);
+	acquire_spinlock(&AllShares.shareslock);
 	if (isExistingObject != NULL)
 	{
+		release_spinlock(&AllShares.shareslock);
 		return E_SHARED_MEM_EXISTS;
 	}
 
@@ -164,12 +166,13 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 	struct Share* ptrToSharedObject = create_share(ownerID, shareName, size, isWritable);
 	if (ptrToSharedObject == NULL)
 	{
+		release_spinlock(&AllShares.shareslock);
 		return E_NO_SHARE;
 	}
 
-	acquire_spinlock(&AllShares.shareslock);
+
 	LIST_INSERT_TAIL(&AllShares.shares_list, ptrToSharedObject);
-	release_spinlock(&AllShares.shareslock);
+
 
 	int framesNumber = ROUNDUP(size,PAGE_SIZE)/PAGE_SIZE;
 	uint32 currentAddress = (uint32)virtual_address;
@@ -182,7 +185,6 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		int allocateResult = allocate_frame(&frame);
 		if (allocateResult == E_NO_MEM)
 		{
-			acquire_spinlock(&AllShares.shareslock);
 			LIST_REMOVE(&AllShares.shares_list, ptrToSharedObject);
 			release_spinlock(&AllShares.shareslock);
 			return E_NO_SHARE;
@@ -191,10 +193,9 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		map_frame(myenv->env_page_directory, frame, currentAddress, PERM_WRITEABLE|PERM_PRESENT|PERM_USER);
 		if (allocateResult == E_NO_MEM)
 		{
-		    acquire_spinlock(&AllShares.shareslock);
 		    LIST_REMOVE(&AllShares.shares_list, ptrToSharedObject);
-		    release_spinlock(&AllShares.shareslock);
 		    free_frame(frame);
+		    release_spinlock(&AllShares.shareslock);
 		    return E_NO_SHARE;
 		}
 
@@ -202,7 +203,7 @@ int createSharedObject(int32 ownerID, char* shareName, uint32 size, uint8 isWrit
 		currentAddress += PAGE_SIZE;
 		index ++;
 	}
-
+	release_spinlock(&AllShares.shareslock);
 	return ptrToSharedObject->ID;
 }
 //======================
