@@ -23,6 +23,5 @@ void init_channel(struct Channel *chan, char *name);
 void sleep(struct Channel *chan, struct spinlock* lk); 	//block the running process on the given channel (queue) using the given lk
 void wakeup_one(struct Channel *chan);					//wakeup ONE blocked process on the given channel (queue)
 void wakeup_all(struct Channel *chan);					//wakeup ALL blocked processes on the given channel (queue)
-void sleep_sem(struct spinlock* lk);
 
 #endif /* KERN_CONC_CHANNEL_H_ */

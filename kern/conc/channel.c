@@ -43,22 +43,6 @@ void sleep(struct Channel *chan, struct spinlock* lk)
 	acquire_spinlock(lk);
 }
 
-void sleep_sem(struct spinlock* lk)
-{
-	//TODO: [PROJECT'24.MS1 - #10] [4] LOCKS - sleep
-	//COMMENT THE FOLLOWING LINE BEFORE START CODING
-	//panic("sleep is not implemented yet");
-	//Your Code is Here...
-	//if (holding_spinlock(&ProcessQueues.qlock )== 1){release_spinlock(&ProcessQueues.qlock);}
-	release_spinlock(lk);
-	acquire_spinlock(&ProcessQueues.qlock);
-	struct Env *cur = get_cpu_proc();
-	cur->env_status = ENV_BLOCKED;
-	sched();
-	release_spinlock(&ProcessQueues.qlock);
-	acquire_spinlock(lk);
-}
-
 //==================================================
 // 3) WAKEUP ONE BLOCKED PROCESS ON A GIVEN CHANNEL:
 //==================================================
