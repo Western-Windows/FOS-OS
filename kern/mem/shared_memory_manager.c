@@ -282,6 +282,7 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 	    struct Share *share = NULL;
 	    uint32 *ptr_page_table = NULL;
 	    struct FrameInfo *frame = get_frame_info(myenv->env_page_directory,(uint32)startVA,&ptr_page_table);
+	    startVA = ROUNDDOWN(startVA,PAGE_SIZE);
 		if(sharedObjectID == -1){
 			bool flag = 1;
 			acquire_spinlock(&AllShares.shareslock);
@@ -289,8 +290,8 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 			        if (share->framesStorage == NULL) {
 			            continue;
 			        }
-
-			        for (int i = 0; i < (share->size/PAGE_SIZE); i++) {
+			        int sz = ROUNDUP(share->size,PAGE_SIZE);
+			        for (int i = 0; i <(sz>>12); i++) {
 			            if (share->framesStorage[i] == frame) {
 			                sharedObjectID = share->ID;
 			                flag= 0;
@@ -315,14 +316,14 @@ int freeSharedObject(int32 sharedObjectID, void *startVA)
 	    }
 	    bool empty = 1;
 	    uint32 start_table_va = ROUNDDOWN(va, PAGE_SIZE<<10);
-	    uint32 end_table_va = ROUNDUP(end_va, PAGE_SIZE <<10);
+	    uint32 end_table_va = ROUNDUP(end_va, PAGE_SIZE<<10);
 	    for (uint32 va = start_table_va; va < end_table_va; va += PAGE_SIZE<<10) {
 	        uint32 *page_table = NULL;
 	        if (get_page_table(myenv->env_page_directory, va, &page_table) == TABLE_NOT_EXIST) {
 	        //	cprintf("NO TABLE EXISTS\n");
 	            continue;
 	        }
-	        for (int i = 0; i < NPTENTRIES; i++) {
+	        for (int i = 0; i < (1<<10); i++) {
 	            if (page_table[i] != 0) {
 	          //  	cprintf("EMPTY TABLE\n");
 	                empty = 0;
