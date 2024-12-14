@@ -479,6 +479,9 @@ void sys_run_env(int32 envId)
 	sched_run_env(envId);
 }
 
+void sys_env_set_priority(int envId,int priority) {
+	env_set_priority(envId,priority);
+}
 
 //====================================
 /*******************************/
@@ -691,7 +694,9 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 	case SYS_allocate_user_mem:
 		sys_allocate_user_mem((uint32)a1,(uint32)a2);
 		return 0;
-
+	case SYS_env_set_priority:
+		sys_env_set_priority((int)a1,(int)a2);
+		return 0;
 	case NSYSCALLS:
 		return 	-E_INVAL;
 		break;

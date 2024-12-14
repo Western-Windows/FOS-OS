@@ -248,17 +248,22 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 {
 	//TODO: [PROJECT'24.MS3 - #07] [3] PRIORITY RR Scheduler - sched_init_PRIRR
 	//Your code is here
-	//Comment the following line
-	panic("Not implemented yet");
-
-
-
-
-
-
-
-
-
+	num_of_ready_queues = numOfPriorities;
+	starvation_threshold = starvThresh;
+	sched_delete_ready_queues();
+	acquire_spinlock(&ProcessQueues.qlock);
+	ProcessQueues.env_ready_queues = kmalloc(sizeof(struct Env_Queue) * num_of_ready_queues);
+	quantums = kmalloc(num_of_ready_queues * sizeof(uint8));
+	kclock_set_quantum(quantum);
+	for (int i = 0;i < numOfPriorities;i++) {
+		init_queue(&(ProcessQueues.env_ready_queues[i]));
+		quantums[i] = quantum;
+		struct Env *cur ;
+		LIST_FOREACH(cur, &ProcessQueues.env_ready_queues[i]){
+			cur->clock_timer = 0;
+		}
+	}
+	release_spinlock(&ProcessQueues.qlock);
 	//=========================================
 	//DON'T CHANGE THESE LINES=================
 	uint16 cnt0 = kclock_read_cnt0_latch() ; //read after write to ensure it's set to the desired value
@@ -349,8 +354,23 @@ struct Env* fos_scheduler_PRIRR()
 	/****************************************************************************************/
 	//TODO: [PROJECT'24.MS3 - #08] [3] PRIORITY RR Scheduler - fos_scheduler_PRIRR
 	//Your code is here
-	//Comment the following line
-	panic("Not implemented yet");
+	struct Env *cur = get_cpu_proc();
+	//acquire_spinlock(&ProcessQueues.qlock);
+	//cprintf("Im here\n");
+	if(cur!=NULL){
+		cur->clock_timer = 0;
+		sched_insert_ready(cur);
+	}
+	for (int i = 0;i < num_of_ready_queues;i++) {
+		if(!LIST_EMPTY(&(ProcessQueues.env_ready_queues[i]))){
+			//cprintf("%d\n",i);
+			struct Env *ans = dequeue(&(ProcessQueues.env_ready_queues[i]));
+			kclock_set_quantum(quantums[i]);
+			return ans;
+		}
+	}
+	kclock_set_quantum(quantums[0]);
+	return NULL;
 }
 
 //========================================
@@ -364,9 +384,24 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		//TODO: [PROJECT'24.MS3 - #09] [3] PRIORITY RR Scheduler - clock_interrupt_handler
 		//Your code is here
 		//Comment the following line
-		panic("Not implemented yet");
+		//sched_print_all();
+		acquire_spinlock(&ProcessQueues.qlock);
+		for(int i = num_of_ready_queues - 1; i >= 0;i--){
+			if (LIST_EMPTY(&(ProcessQueues.env_ready_queues[i]))) continue;
+			struct Env *cur ;
+			LIST_FOREACH(cur, &ProcessQueues.env_ready_queues[i]){
+				cur->clock_timer++;
+				if(cur->clock_timer>=starvation_threshold && cur->priority != 0){
+					cprintf("[%d]promoted to priority : %d\n",cur->env_id,cur->priority - 1);
+					sched_remove_ready(cur);
+					cur->clock_timer = 0;
+					cur->priority--;
+					sched_insert_ready(cur);
+				}
+			}
+		}
+		release_spinlock(&ProcessQueues.qlock);
 	}
-
 
 
 	/********DON'T CHANGE THESE LINES***********/
