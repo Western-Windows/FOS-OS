@@ -249,7 +249,7 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 	//TODO: [PROJECT'24.MS3 - #07] [3] PRIORITY RR Scheduler - sched_init_PRIRR
 	//Your code is here
 	num_of_ready_queues = numOfPriorities;
-	starvation_threshold = starvThresh;
+	sched_set_starv_thresh(starvThresh);
 	sched_delete_ready_queues();
 	acquire_spinlock(&ProcessQueues.qlock);
 	ProcessQueues.env_ready_queues = kmalloc(sizeof(struct Env_Queue) * num_of_ready_queues);
@@ -259,9 +259,13 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 		init_queue(&(ProcessQueues.env_ready_queues[i]));
 		quantums[i] = quantum;
 		struct Env *cur ;
-		LIST_FOREACH(cur, &ProcessQueues.env_ready_queues[i]){
-			cur->clock_timer = 0;
+		//=============TO REVIEW===============
+		if (!LIST_EMPTY(&(ProcessQueues.env_ready_queues[i]))) {
+			LIST_FOREACH(cur, &ProcessQueues.env_ready_queues[i]){
+				cur->clock_timer = 0;
+			}
 		}
+		//=====================================
 	}
 	release_spinlock(&ProcessQueues.qlock);
 	//=========================================
@@ -355,8 +359,6 @@ struct Env* fos_scheduler_PRIRR()
 	//TODO: [PROJECT'24.MS3 - #08] [3] PRIORITY RR Scheduler - fos_scheduler_PRIRR
 	//Your code is here
 	struct Env *cur = get_cpu_proc();
-	//acquire_spinlock(&ProcessQueues.qlock);
-	//cprintf("Im here\n");
 	if(cur!=NULL){
 		cur->clock_timer = 0;
 		sched_insert_ready(cur);
@@ -392,7 +394,7 @@ void clock_interrupt_handler(struct Trapframe* tf)
 			LIST_FOREACH(cur, &ProcessQueues.env_ready_queues[i]){
 				cur->clock_timer++;
 				if(cur->clock_timer>=starvation_threshold && cur->priority != 0){
-					cprintf("[%d]promoted to priority : %d\n",cur->env_id,cur->priority - 1);
+					//cprintf("[%d]promoted to priority : %d\n",cur->env_id,cur->priority - 1);
 					sched_remove_ready(cur);
 					cur->clock_timer = 0;
 					cur->priority--;
