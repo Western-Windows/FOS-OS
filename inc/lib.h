@@ -84,7 +84,8 @@ void 	sys_set_uheap_strategy(uint32 heapStrategy);
 int 	sys_pf_calculate_allocated_pages(void);
 
 //Semaphores
-
+void	sys_sem_wait(struct semaphore *sem);
+void	sys_sem_signal(struct semaphore *sem);
 
 //Sharing
 //2017

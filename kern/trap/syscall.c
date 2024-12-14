@@ -360,6 +360,40 @@ void sys_set_uheap_strategy(uint32 heapStrategy)
 /*******************************/
 //[PROJECT'24.MS3] ADD SUITABLE CODE HERE
 
+void sys_sem_wait(struct semaphore *sem)
+{
+	//Should acquire the lock here
+	while(xchg(&(sem->semdata->lock), 1) != 0);
+	sem->semdata->lock = 1;
+	sem->semdata->count--;
+	if (sem->semdata->count < 0)
+	{
+		struct Env* myenv = get_cpu_proc();
+		enqueue(&(sem->semdata->queue), myenv);
+		acquire_spinlock(&ProcessQueues.qlock);
+		myenv->env_status = ENV_BLOCKED;
+		sched();
+		release_spinlock(&ProcessQueues.qlock);
+		sem->semdata->lock = 0;
+	}
+	//Should release the lock here
+	sem->semdata->lock = 0;
+}
+
+void sys_sem_signal(struct semaphore *sem)
+{
+	//Should acquire the lock here
+	while(xchg(&(sem->semdata->lock), 1) != 0);
+	sem->semdata->lock = 1;
+	sem->semdata->count++;
+	if (sem->semdata->count <= 0)
+	{
+		struct Env *myenv = dequeue(&(sem->semdata->queue));
+		sched_insert_ready(myenv);
+	}
+	//Should release the lock here
+	sem->semdata->lock = 0;
+}
 
 /*******************************/
 /* SHARED MEMORY SYSTEM CALLS */

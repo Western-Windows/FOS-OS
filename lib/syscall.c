@@ -318,3 +318,12 @@ void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 	syscall(SYS_allocate_user_mem,virtual_address,size,0,0,0);
 }
 
+void sys_sem_wait(struct semaphore *sem)
+{
+	syscall(SYS_sem_wait,(uint32)sem,0,0,0,0);
+}
+
+void sys_sem_signal(struct semaphore *sem)
+{
+	syscall(SYS_sem_signal,(uint32)sem,0,0,0,0);
+}

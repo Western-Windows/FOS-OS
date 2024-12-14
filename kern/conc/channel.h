@@ -24,5 +24,4 @@ void sleep(struct Channel *chan, struct spinlock* lk); 	//block the running proc
 void wakeup_one(struct Channel *chan);					//wakeup ONE blocked process on the given channel (queue)
 void wakeup_all(struct Channel *chan);					//wakeup ALL blocked processes on the given channel (queue)
 
-
 #endif /* KERN_CONC_CHANNEL_H_ */
