@@ -105,7 +105,7 @@ struct Env {
 	int32 env_id;					// Unique environment identifier
 	int32 env_parent_id;			// env_id of this env's parent
 	unsigned env_status;			// Status of the environment
-	unsigned int clock_timer;
+	int64 clock_timer;
 	int priority;					// Current priority
 	char prog_name[PROGNAMELEN];	// Program name (to print it via USER.cprintf in multitasking)
 	void* channel;					// Address of the channel that it's blocked (sleep) on it
