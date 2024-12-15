@@ -259,13 +259,6 @@ void sched_init_PRIRR(uint8 numOfPriorities, uint8 quantum, uint32 starvThresh)
 		init_queue(&(ProcessQueues.env_ready_queues[i]));
 		quantums[i] = quantum;
 		struct Env *cur ;
-		//=============TO REVIEW===============
-		if (!LIST_EMPTY(&(ProcessQueues.env_ready_queues[i]))) {
-			LIST_FOREACH(cur, &ProcessQueues.env_ready_queues[i]){
-				cur->clock_timer = 0;
-			}
-		}
-		//=====================================
 	}
 	release_spinlock(&ProcessQueues.qlock);
 	//=========================================
@@ -392,7 +385,6 @@ void clock_interrupt_handler(struct Trapframe* tf)
 			if (LIST_EMPTY(&(ProcessQueues.env_ready_queues[i]))) continue;
 			struct Env *cur ;
 			LIST_FOREACH(cur, &ProcessQueues.env_ready_queues[i]){
-				cur->clock_timer++;
 				if(cur->clock_timer>=starvation_threshold){
 					//cprintf("[%d]promoted to priority : %d\n",cur->env_id,cur->priority - 1);
 					sched_remove_ready(cur);
@@ -400,6 +392,7 @@ void clock_interrupt_handler(struct Trapframe* tf)
 					cur->priority--;
 					sched_insert_ready(cur);
 				}
+				cur->clock_timer++;
 			}
 		}
 		release_spinlock(&ProcessQueues.qlock);
