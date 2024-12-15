@@ -388,12 +388,12 @@ void clock_interrupt_handler(struct Trapframe* tf)
 		//Comment the following line
 		//sched_print_all();
 		acquire_spinlock(&ProcessQueues.qlock);
-		for(int i = num_of_ready_queues - 1; i >= 0;i--){
+		for(int i = 1; i < num_of_ready_queues;i++){
 			if (LIST_EMPTY(&(ProcessQueues.env_ready_queues[i]))) continue;
 			struct Env *cur ;
 			LIST_FOREACH(cur, &ProcessQueues.env_ready_queues[i]){
 				cur->clock_timer++;
-				if(cur->clock_timer>=starvation_threshold && cur->priority != 0){
+				if(cur->clock_timer>=starvation_threshold){
 					//cprintf("[%d]promoted to priority : %d\n",cur->env_id,cur->priority - 1);
 					sched_remove_ready(cur);
 					cur->clock_timer = 0;
