@@ -463,13 +463,64 @@ void env_start(void)
 void env_free(struct Env *e)
 {
 	/*REMOVE THIS LINE BEFORE START CODING*/
-	return;
+	//return;
 	/**************************************/
 
 	//[PROJECT'24.MS3] BONUS [EXIT ENV] env_free
 	// your code is here, remove the panic and write your code
-	panic("env_free() is not implemented yet...!!");
+	// panic("env_free() is not implemented yet...!!");
 
+	if(e == NULL)
+	{
+		return;
+	}
+
+	//********************************************************************//
+	//             a) Freeing All pages in the page working set
+	//             		b) Freeing working set itself
+	//********************************************************************//
+
+	struct WorkingSetElement* currentElement =  LIST_FIRST(&(e->page_WS_list));
+	while(currentElement) // currentElement != NULL
+	{
+		uint32 va = currentElement->virtual_address;
+		env_page_ws_invalidate(e, va);	// flushes pages from the working set of a given environment.
+		currentElement = LIST_NEXT((struct WorkingSetElement*) currentElement);
+	}
+	printf("All pages in the page working set have been freed.\n");
+	printf("Page working set have been freed.\n");
+
+	//********************************************************************//
+	//    c) Freeing All page tables in the entire user virtual memory
+	//********************************************************************//
+
+	uint32 USER_BOTTOM = 0;
+	while (USER_BOTTOM != USER_TOP)
+	{
+		uint32* pageTablePtr = NULL;
+		uint32 returns = get_page_table(e->env_page_directory, USER_BOTTOM, &pageTablePtr);
+		if ((pageTablePtr != NULL) && (returns == TABLE_IN_MEMORY))
+		{
+			kfree(pageTablePtr);
+		}
+
+		USER_BOTTOM += PAGE_SIZE;
+	}
+	printf("All page tables have been freed.\n");
+
+	//********************************************************************//
+	//                     d) Freeing directory table
+	//********************************************************************//
+
+	kfree(e->env_page_directory);
+	printf("Page directory has been freed.\n");
+
+	//********************************************************************//
+	//                    e) Freeing user kernel stack
+	//********************************************************************//
+
+	delete_user_kern_stack(e);
+	printf("User kernel stack has been freed.\n");
 
 	// [9] remove this program from the page file
 	/*(ALREADY DONE for you)*/
