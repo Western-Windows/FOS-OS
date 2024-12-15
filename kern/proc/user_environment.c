@@ -487,8 +487,8 @@ void env_free(struct Env *e)
 		env_page_ws_invalidate(e, va);	// flushes pages from the working set of a given environment.
 		currentElement = LIST_NEXT((struct WorkingSetElement*) currentElement);
 	}
-	printf("All pages in the page working set have been freed.\n");
-	printf("Page working set have been freed.\n");
+	cprintf("All pages in the page working set have been freed.\n");
+	cprintf("Page working set have been freed.\n");
 
 	//********************************************************************//
 	//    c) Freeing All page tables in the entire user virtual memory
@@ -506,21 +506,21 @@ void env_free(struct Env *e)
 
 		USER_BOTTOM += PAGE_SIZE;
 	}
-	printf("All page tables have been freed.\n");
+	cprintf("All page tables have been freed.\n");
 
 	//********************************************************************//
 	//                     d) Freeing directory table
 	//********************************************************************//
 
 	kfree(e->env_page_directory);
-	printf("Page directory has been freed.\n");
+	cprintf("Page directory has been freed.\n");
 
 	//********************************************************************//
 	//                    e) Freeing user kernel stack
 	//********************************************************************//
 
 	delete_user_kern_stack(e);
-	printf("User kernel stack has been freed.\n");
+	cprintf("User kernel stack has been freed.\n");
 
 	// [9] remove this program from the page file
 	/*(ALREADY DONE for you)*/
