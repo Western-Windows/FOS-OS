@@ -956,10 +956,33 @@ void delete_user_kern_stack(struct Env* e)
 #if USE_KHEAP
 	//[PROJECT'24.MS3] BONUS
 	// Write your code here, remove the panic and write your code
-	panic("delete_user_kern_stack() is not implemented yet...!!");
+	//panic("delete_user_kern_stack() is not implemented yet...!!");
 
 	//Delete the allocated space for the user kernel stack of this process "e"
 	//remember to delete the bottom GUARD PAGE (i.e. not mapped)
+
+	char* STACK_BOTTOM = e->kstack;
+	uint32 stackSize = e->initNumStackPages;
+
+	uint32 *pageTablePtr = NULL;
+	uint32 virtual_address = (uint32)STACK_BOTTOM;
+	get_page_table(e->env_page_directory,virtual_address,&pageTablePtr);
+	pageTablePtr[PTX(STACK_BOTTOM)] &= PERM_PRESENT;
+
+	STACK_BOTTOM = (uint32*)((char*)STACK_BOTTOM + PAGE_SIZE);
+
+	for(int i = 1 ; i <= stackSize ; i ++)
+	{
+		pageTablePtr = NULL;
+		uint32 returns = get_page_table(e->env_page_directory, STACK_BOTTOM, &pageTablePtr);
+		if ((pageTablePtr != NULL) && (returns == TABLE_IN_MEMORY))
+		{
+			kfree(pageTablePtr);
+		}
+
+		STACK_BOTTOM = (uint32*)((char*)STACK_BOTTOM + PAGE_SIZE);
+	}
+
 #else
 	panic("KERNEL HEAP is OFF! user kernel stack can't be deleted");
 #endif
