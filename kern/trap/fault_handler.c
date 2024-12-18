@@ -286,22 +286,17 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
  * Used Pages: If a page has been accessed recently, reset its status and continue the process.
  * Modified Pages: If a page has been modified, you MUST write its changes to disk before replacing it.
  * The Rules of the Game:
- * 0 <= page_WS_max_sweeps < LLONG_MAX hahahaha -> max number of sweeps!.
+ * LLONG_MIN <= page_WS_max_sweeps < LLONG_MAX -> max number of sweeps!.
  * 0 < N <= page_WS_max_sweeps —> the number of chances each page gets.
  * 0 < n <= page_WS_max_sweeps —> the size of your working set.
  * You’ve got the skills, but can you handle the pressure? Implement it efficiently, dodge the pitfalls, and claim "Winner Winner Chicken Dinner".
  * remember, the OS is counting on you don’t let it down!
  * */
 		//cprintf("REPLACEMENT=========================WS Size = %d\n", wsSize );
-		//cprintf("working set state before replacement:\n");
-		//env_page_ws_print(faulted_env);
+
 		int N = (page_WS_max_sweeps >= 0) ? page_WS_max_sweeps : -page_WS_max_sweeps;
-		int bulked = N;
-		int counter = N;
-		int sub,temp;
 		bool found = false;
 		if (LIST_EMPTY(&(faulted_env->page_WS_list))) {
-			//cprintf("SHIT IT'S EMPTY DUDE \n");
 		    return;
 		}
 
@@ -317,18 +312,18 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 		    }
 		    uint32 permissions = pt_get_page_permissions(faulted_env->env_page_directory, cur_ptr->virtual_address);
 		    bool used = ((permissions & PERM_USED) == PERM_USED);
+
 		    if (!used) {
-		        cur_ptr->sweeps_counter += bulked;
+		        cur_ptr->sweeps_counter += N;
 		    } else {
 		        pt_set_page_permissions(faulted_env->env_page_directory, cur_ptr->virtual_address, 0, PERM_USED);
 		        cur_ptr->sweeps_counter = 0;
 		    }
-		    bool modified = ((permissions & PERM_MODIFIED) == PERM_MODIFIED);
-		    int best = (modified && page_WS_max_sweeps < 0)? N+1 : N;
-		    sub = best - cur_ptr->sweeps_counter;
-		    counter = MIN(counter, sub);
 
-		    if (cur_ptr->sweeps_counter >= best) {
+		    bool modified = ((permissions & PERM_MODIFIED) == PERM_MODIFIED);
+		    int checker = (modified && page_WS_max_sweeps<0)? N+1 : N;
+
+		    if (cur_ptr->sweeps_counter >= checker) {
 		        uint32 cur_va = cur_ptr->virtual_address;
 
 		        if (modified) {
@@ -343,10 +338,10 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 		        unmap_frame(faulted_env->env_page_directory, cur_va);
 		        struct FrameInfo *frame = NULL;
 		        if (allocate_frame(&frame) != 0) {
-		            //cprintf("HOW DARE YOU!\n");
 		        	return;
 		        }
-		        map_frame(faulted_env->env_page_directory, frame, fault_va, PERM_USER|PERM_WRITEABLE);
+
+		        map_frame(faulted_env->env_page_directory, frame, fault_va, PERM_USER|PERM_WRITEABLE|PERM_PRESENT);
 		        pf_read_env_page(faulted_env, (void *)fault_va);
 
 		        cur_ptr->virtual_address = fault_va;
@@ -354,18 +349,11 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 		        found = true;
 		    }
 
-		    // cprintf("CURRENT ON THE LINE PLEASE = %d\n" ,faulted_env->page_last_WS_element);
 		    faulted_env->page_last_WS_element = LIST_NEXT(cur_ptr);
 		    if (faulted_env->page_last_WS_element == NULL)
 		        faulted_env->page_last_WS_element = LIST_FIRST(&(faulted_env->page_WS_list));
-		    // cprintf("NEXT ON LINE PLEASE = %d\n" ,faulted_env->page_last_WS_element);
-
 		}
-		bulked = counter;
-		// cprintf("thanks we are done here...bye:>\n");
 
-		//		    cprintf("working set after replacement:\n");
-		//		    env_page_ws_print(faulted_env);
 	}
 }
 void __page_fault_handler_with_buffering(struct Env * curenv, uint32 fault_va)
