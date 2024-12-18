@@ -13,9 +13,9 @@ int firstTimeSleepLock = 1;
 void* sbrk(int increment)
 {
 	void* return_address = sys_sbrk(increment);
-	if (return_address != (void*)-1) {
-		mark_pages_arr(return_address,increment);
-	}
+//	if (return_address != (void*)-1) {
+//		mark_pages_arr(return_address,increment);
+//	}
 	return return_address;
 }
 

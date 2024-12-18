@@ -163,6 +163,7 @@ void* sys_sbrk(int numOfPages)
 		uint32* segmentBreak_in_uint32 = (uint32*)env->segmentBreak;
 		uint32* new_end_block = segmentBreak_in_uint32 - 1;
 		*new_end_block = 1;
+		allocate_user_mem(env,return_address,size_added);
 		return return_address;
 }
 
