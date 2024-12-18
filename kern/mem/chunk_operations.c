@@ -155,15 +155,15 @@ void* sys_sbrk(int numOfPages)
 		uint32* return_address_in_uint32 = (uint32*) return_address;
 
 
-		uint32 free_frames = MemFrameLists.free_frame_list.size;
+		uint32 free_frames = LIST_SIZE(&MemFrameLists.free_frame_list);
 		if (available_pages < numOfPages || free_frames < numOfPages) {
 			return (void *) -1;
 		}
-		env->segmentBreak = (uint32*)((char*)env->segmentBreak + size_added);
+		env->segmentBreak = (void*)((char*)env->segmentBreak + size_added);
 		uint32* segmentBreak_in_uint32 = (uint32*)env->segmentBreak;
 		uint32* new_end_block = segmentBreak_in_uint32 - 1;
 		*new_end_block = 1;
-		allocate_user_mem(env,return_address,size_added);
+		allocate_user_mem(env,(uint32)return_address,size_added);
 		return return_address;
 }
 
