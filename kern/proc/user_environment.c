@@ -487,25 +487,55 @@ void env_free(struct Env *e)
 		env_page_ws_invalidate(e, va);	// flushes pages from the working set of a given environment.
 		currentElement = LIST_NEXT((struct WorkingSetElement*) currentElement);
 	}
+
+	LIST_CLEAR(&e->page_WS_list);
+	e->page_last_WS_element = NULL;
+
 	cprintf("All pages in the page working set have been freed.\n");
 	cprintf("Page working set have been freed.\n");
+
+	//********************************************************************//
+	//                    e) Freeing user kernel stack
+	//********************************************************************//
+
+	delete_user_kern_stack(e);
+	cprintf("User kernel stack has been freed.\n");
 
 	//********************************************************************//
 	//    c) Freeing All page tables in the entire user virtual memory
 	//********************************************************************//
 
-	uint32 USER_BOTTOM = 0;
-	while (USER_BOTTOM != USER_TOP)
+	uint32 USER_BOTTOM = PDX(USER_TOP);
+
+	for (int index = 0 ; index < USER_BOTTOM ; index ++)
 	{
-		uint32* pageTablePtr = NULL;
-		uint32 returns = get_page_table(e->env_page_directory, USER_BOTTOM, &pageTablePtr);
-		if ((pageTablePtr != NULL) && (returns == TABLE_IN_MEMORY))
+		//Skip Unmapped Page Tables
+		if (!(e->env_page_directory[index] & PERM_PRESENT))
 		{
-			kfree(pageTablePtr);
+		    continue;
 		}
 
-		USER_BOTTOM += PAGE_SIZE;
+		// Mapped Page Tables
+		uint32 pa = EXTRACT_ADDRESS(e->env_page_directory[index]);
+		uint32 *pageTablePtr = (uint32 *)kheap_virtual_address(pa);
+		uint32 va;
+
+		for (int index = 0 ; index < NPTENTRIES ; index ++)
+		{
+			if (pageTablePtr[index])
+			{
+				uint32 pa = EXTRACT_ADDRESS(pageTablePtr[index]);
+				va = kheap_virtual_address(pa);
+
+				unmap_frame(e->env_page_directory, va);
+				pt_clear_page_table_entry(e->env_page_directory, va);
+			}
+		}
+
+		kfree(pageTablePtr);
+		pd_clear_page_dir_entry(e->env_page_directory, va);
 	}
+
 	cprintf("All page tables have been freed.\n");
 
 	//********************************************************************//
@@ -515,12 +545,6 @@ void env_free(struct Env *e)
 	kfree(e->env_page_directory);
 	cprintf("Page directory has been freed.\n");
 
-	//********************************************************************//
-	//                    e) Freeing user kernel stack
-	//********************************************************************//
-
-	delete_user_kern_stack(e);
-	cprintf("User kernel stack has been freed.\n");
 
 	// [9] remove this program from the page file
 	/*(ALREADY DONE for you)*/
@@ -962,25 +986,11 @@ void delete_user_kern_stack(struct Env* e)
 	//remember to delete the bottom GUARD PAGE (i.e. not mapped)
 
 	char* STACK_BOTTOM = e->kstack;
-	uint32 stackSize = e->initNumStackPages;
-
-	uint32 *pageTablePtr = NULL;
-	uint32 virtual_address = (uint32)STACK_BOTTOM;
-	get_page_table(e->env_page_directory,virtual_address,&pageTablePtr);
-	pageTablePtr[PTX(STACK_BOTTOM)] &= PERM_PRESENT;
-
-	STACK_BOTTOM = (uint32*)((char*)STACK_BOTTOM + PAGE_SIZE);
-
-	for(int i = 1 ; i <= stackSize ; i ++)
+	if (STACK_BOTTOM != NULL)
 	{
-		pageTablePtr = NULL;
-		uint32 returns = get_page_table(e->env_page_directory, STACK_BOTTOM, &pageTablePtr);
-		if ((pageTablePtr != NULL) && (returns == TABLE_IN_MEMORY))
-		{
-			kfree(pageTablePtr);
-		}
-
-		STACK_BOTTOM = (uint32*)((char*)STACK_BOTTOM + PAGE_SIZE);
+		kfree((void*)STACK_BOTTOM);
+		pt_clear_page_table_entry(e->env_page_directory, STACK_BOTTOM);
+		STACK_BOTTOM = NULL;
 	}
 
 #else
