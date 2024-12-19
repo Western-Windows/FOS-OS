@@ -196,6 +196,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 	uint32 sizeOfSharedObject = sys_getSizeOfSharedObject(ownerEnvID, sharedVarName);
 	if (sizeOfSharedObject == E_SHARED_MEM_NOT_EXISTS)
 	{
+		//cprintf("No Shared Mem Not Exists\n");
 		return NULL;
 	}
 
@@ -233,6 +234,7 @@ void* sget(int32 ownerEnvID, char *sharedVarName)
 
 	if (!isFound || returns == E_SHARED_MEM_NOT_EXISTS) // Required consecutive pages not found
 	{
+		//cprintf("Not Found \n");
 		va = NULL;
 	}
 	return va;

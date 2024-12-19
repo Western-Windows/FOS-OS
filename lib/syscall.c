@@ -322,3 +322,14 @@ void sys_env_set_priority(int envId,int priority){
 	syscall(SYS_env_set_priority,envId,priority,0,0,0);
 }
 
+void sys_sem_wait(struct semaphore *sem)
+{
+	//cprintf("Wait syscall\n");
+	syscall(SYS_sem_wait,(uint32)sem,0,0,0,0);
+}
+
+void sys_sem_signal(struct semaphore *sem)
+{
+	//cprintf("Signal syscall\n");
+	syscall(SYS_sem_signal,(uint32)sem,0,0,0,0);
+}

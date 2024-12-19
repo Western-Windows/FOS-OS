@@ -93,9 +93,11 @@ struct Share* create_share(int32 ownerID, char* shareName, uint32 size, uint8 is
 		return NULL;
 	}
 	sharedObjectPtr->ownerID = ownerID;
-	for (int i = 0; i < sizeof(shareName) / sizeof(int); i++){
-		sharedObjectPtr->name[i] = shareName[i];
-	}
+//	for (int i = 0; i < sizeof(shareName) / sizeof(int); i++){
+//		sharedObjectPtr->name[i] = shareName[i];
+//	}
+	strcpy(sharedObjectPtr->name, shareName);
+	//cprintf("Shared object name  %s  sharename %s\n",sharedObjectPtr->name,shareName);
 	sharedObjectPtr->size = size;
 	sharedObjectPtr->isWritable = isWritable;
 	sharedObjectPtr->references = 1;
@@ -126,18 +128,22 @@ struct Share* get_share(int32 ownerID, char* name)
 	//Your Code is Here...
 
 	acquire_spinlock(&AllShares.shareslock);
-
+	//cprintf("I'm searching for sem in getshare name %s id %d\n", name, ownerID);
 	struct Share *ptr;
 	//for (int i = 0; i < LIST_SIZE(&AllShares.shares_list); i++)
 	LIST_FOREACH (ptr, &AllShares.shares_list)
 	{
+		//cprintf("iterator name %s & id %d \n", ptr->name, ptr->ownerID);
+
 		if (ptr->ownerID == ownerID && (strcmp(ptr->name, name) == 0))
 		{
 			release_spinlock(&AllShares.shareslock);
+			//cprintf("Found The object\n");
 			return ptr;
 		}
 	}
 	release_spinlock(&AllShares.shareslock);
+	//cprintf("Returned Null in get share\n");
 	return NULL;
 }
 
@@ -221,6 +227,7 @@ int getSharedObject(int32 ownerID, char* shareName, void* virtual_address)
 	struct Share* sharedObject = get_share(ownerID, shareName);
 	if(sharedObject == NULL)
 	{
+		//cprintf("get share returned null\n");
 		return E_SHARED_MEM_NOT_EXISTS;
 	}
 

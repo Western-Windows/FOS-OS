@@ -107,6 +107,7 @@ void env_init(void)
 // Allocates a new env and loads the named user program into it.
 struct Env* env_create(char* user_program_name, unsigned int page_WS_size, unsigned int LRU_second_list_size, unsigned int percent_WS_pages_to_remove)
 {
+
 	//[1] get pointer to the start of the "user_program_name" program in memory
 	// Hint: use "get_user_program_info" function,
 	// you should set the following "ptr_program_start" by the start address of the user program
@@ -463,20 +464,122 @@ void env_start(void)
 void env_free(struct Env *e)
 {
 	/*REMOVE THIS LINE BEFORE START CODING*/
-	return;
+	//return;
 	/**************************************/
 
 	//[PROJECT'24.MS3] BONUS [EXIT ENV] env_free
 	// your code is here, remove the panic and write your code
-	panic("env_free() is not implemented yet...!!");
+	// panic("env_free() is not implemented yet...!!");
+
+	if(e == NULL)
+	{
+		return;
+	}
+
+	//********************************************************************//
+	//             a) Freeing All pages in the page working set
+	//             		b) Freeing working set itself
+	//********************************************************************//
+
+	struct WorkingSetElement* currentElement =  NULL;
+	//struct WorkingSetElement* currentElement =  LIST_FIRST(&(e->page_WS_list));
+//	while(currentElement) // currentElement != NULL
+//	{
+//		uint32 va = currentElement->virtual_address;
+//		env_page_ws_invalidate(e, va);	// flushes pages from the working set of a given environment.
+//		//kfree((void *)currentElement);
+//		currentElement = LIST_NEXT((struct WorkingSetElement*) currentElement);
+//	}
+	LIST_FOREACH(currentElement, &(e->page_WS_list)){
+		env_page_ws_invalidate(e, currentElement->virtual_address);
+	}
+
+	LIST_INIT(&e->page_WS_list);
+	e->page_last_WS_element = NULL;
+
+	cprintf("All pages in the page working set have been freed.\n");
+	cprintf("Page working set have been freed.\n");
+
+	//********************************************************************//
+	//                    c) Freeing user kernel stack
+	//********************************************************************//
+
+	delete_user_kern_stack(e);
+	cprintf("User kernel stack has been freed.\n");
 
 
-	// [9] remove this program from the page file
+	//********************************************************************//
+	//    				d) Freeing All Shared Objects
+	//					e) Freeing All Semaphores
+	//********************************************************************//
+	struct Share *share = NULL;
+	LIST_FOREACH(share, &AllShares.shares_list){
+		acquire_spinlock(&AllShares.shareslock);
+		if (share->ownerID == e->env_id){
+			release_spinlock(&AllShares.shareslock);
+			free_share(share);
+		}
+
+	}
+	if (holding_spinlock(&AllShares.shareslock))
+		release_spinlock(&AllShares.shareslock);
+
+
+	//********************************************************************//
+	//    f) Freeing All page tables in the entire user virtual memory
+	//********************************************************************//
+
+	uint32 USER_BOTTOM = PDX(USER_TOP);
+	//cprintf("User_bottom %d\n", USER_BOTTOM);
+	for (int index = 0 ; index < USER_BOTTOM ; index ++)
+	{
+		//Skip Unmapped Page Tables
+		if (!(e->env_page_directory[index] & PERM_PRESENT))
+		{
+		    continue;
+		}
+
+		// Mapped Page Tables
+		uint32 pa = EXTRACT_ADDRESS(e->env_page_directory[index]);
+		uint32 *pageTablePtr = (uint32 *)kheap_virtual_address(pa);
+		uint32 va;
+
+		for (int index = 0 ; index < NPTENTRIES ; index ++)
+		{
+			if (pageTablePtr[index] != 0)
+			{
+				//cprintf("Page table ptr index %x \n", pageTablePtr[index]);
+				uint32 pa = EXTRACT_ADDRESS(pageTablePtr[index]);
+				va = kheap_virtual_address(pa);
+				//cprintf("VA of a page table entry = %x\n", va);
+				unmap_frame(e->env_page_directory, va);
+				uint32* ptr_page_table ;
+				int ret = get_page_table(e->env_page_directory, va, &ptr_page_table);
+				if (ptr_page_table != NULL)
+					pt_clear_page_table_entry(e->env_page_directory, va);
+			}
+		}
+		//cprintf("Freeing entire page table va = %x\n", va);
+		kfree(pageTablePtr);
+		pd_clear_page_dir_entry(e->env_page_directory, va);
+	}
+
+	cprintf("All page tables have been freed.\n");
+
+	//********************************************************************//
+	//                     g) Freeing directory table
+	//********************************************************************//
+
+	kfree(e->env_page_directory);
+	cprintf("Page directory has been freed.\n");
+
+
+	// [h] remove this program from the page file
 	/*(ALREADY DONE for you)*/
 	pf_free_env(e); /*(ALREADY DONE for you)*/ // (removes all of the program pages from the page file)
 	/*========================*/
 
-	// [10] free the environment (return it back to the free environment list)
+	// [i] free the environment (return it back to the free environment list)
 	/*(ALREADY DONE for you)*/
 	free_environment(e); /*(ALREADY DONE for you)*/ // (frees the environment (returns it back to the free environment list))
 	/*========================*/
@@ -905,10 +1008,19 @@ void delete_user_kern_stack(struct Env* e)
 #if USE_KHEAP
 	//[PROJECT'24.MS3] BONUS
 	// Write your code here, remove the panic and write your code
-	panic("delete_user_kern_stack() is not implemented yet...!!");
+	//panic("delete_user_kern_stack() is not implemented yet...!!");
 
 	//Delete the allocated space for the user kernel stack of this process "e"
 	//remember to delete the bottom GUARD PAGE (i.e. not mapped)
+
+	char* STACK_BOTTOM = e->kstack;
+	if (STACK_BOTTOM != NULL)
+	{
+		kfree((void*)STACK_BOTTOM);
+		pt_clear_page_table_entry(e->env_page_directory, (uint32)STACK_BOTTOM);
+		STACK_BOTTOM = NULL;
+	}
+
 #else
 	panic("KERNEL HEAP is OFF! user kernel stack can't be deleted");
 #endif

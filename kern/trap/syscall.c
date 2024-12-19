@@ -360,6 +360,56 @@ void sys_set_uheap_strategy(uint32 heapStrategy)
 /*******************************/
 //[PROJECT'24.MS3] ADD SUITABLE CODE HERE
 
+void sys_sem_wait(struct semaphore *sem)
+{
+	//Should acquire the lock here
+	struct Env* myenv = get_cpu_proc();
+	//cprintf("Wait Function Semaphore Name %s Here  & Env %s %d\n", sem->semdata->name, myenv->prog_name, myenv->env_id);
+	while(xchg(&(sem->semdata->lock), 1) != 0);
+	//sem->semdata->lock = 1;
+	sem->semdata->count--;
+	//cprintf("Entered the critical section \n");
+	if (sem->semdata->count < 0)
+	{
+		acquire_spinlock(&ProcessQueues.qlock);
+		//cprintf("Acquired Process Queue\n");
+		enqueue(&(sem->semdata->queue), myenv);
+		//cprintf("Env enqueued its name and id %s %d\n", myenv->prog_name, myenv->env_id);
+		sem->semdata->lock = 0;
+		myenv->env_status = ENV_BLOCKED;
+		//cprintf("Env Blocked\n");
+		//cprintf("Before Sched\n");
+		sched();
+		//cprintf("After Sched\n");
+		release_spinlock(&ProcessQueues.qlock);
+		//cprintf("Released Process Queue\n");
+		//cprintf("Released Sem Lock inside if cond\n");
+	}
+	//Should release the lock here
+	//cprintf("Env released outside lock its name and id %s %d\n", myenv->prog_name, myenv->env_id);
+	sem->semdata->lock = 0;
+	//cprintf("Released sem lock outside if cond\n");
+}
+
+void sys_sem_signal(struct semaphore *sem)
+{
+	//cprintf("Signal Function Semaphore Name Here %s\n", sem->semdata->name);
+	//Should acquire the lock here
+	while(xchg(&(sem->semdata->lock), 1) != 0);
+	//sem->semdata->lock = 1;
+	sem->semdata->count++;
+	if (sem->semdata->count <= 0)
+	{
+		acquire_spinlock(&ProcessQueues.qlock);
+		struct Env *myenv = dequeue(&(sem->semdata->queue));
+		//cprintf("Dequeued in signal env name %s & id %d\n",myenv->prog_name,myenv->env_id);
+		sched_insert_ready(myenv);
+		release_spinlock(&ProcessQueues.qlock);
+	}
+	//Should release the lock here
+	//cprintf("Signal releases lock\n");
+	sem->semdata->lock = 0;
+}
 
 /*******************************/
 /* SHARED MEMORY SYSTEM CALLS */
@@ -697,6 +747,17 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 	case SYS_env_set_priority:
 		sys_env_set_priority((int)a1,(int)a2);
 		return 0;
+
+	case SYS_sem_wait:
+		sys_sem_wait((struct semaphore *)a1);
+		return 0;
+		break;
+
+	case SYS_sem_signal:
+		sys_sem_signal((struct semaphore *)a1);
+		return 0;
+		break;
+
 	case NSYSCALLS:
 		return 	-E_INVAL;
 		break;
