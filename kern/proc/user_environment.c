@@ -488,7 +488,7 @@ void env_free(struct Env *e)
 		currentElement = LIST_NEXT((struct WorkingSetElement*) currentElement);
 	}
 
-	LIST_CLEAR(&e->page_WS_list);
+	LIST_INIT(&e->page_WS_list);
 	e->page_last_WS_element = NULL;
 
 	cprintf("All pages in the page working set have been freed.\n");
@@ -989,7 +989,7 @@ void delete_user_kern_stack(struct Env* e)
 	if (STACK_BOTTOM != NULL)
 	{
 		kfree((void*)STACK_BOTTOM);
-		pt_clear_page_table_entry(e->env_page_directory, STACK_BOTTOM);
+		pt_clear_page_table_entry(e->env_page_directory, (uint32)STACK_BOTTOM);
 		STACK_BOTTOM = NULL;
 	}
 
