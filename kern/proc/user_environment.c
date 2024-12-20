@@ -514,7 +514,8 @@ void env_free(struct Env *e)
 	//********************************************************************//
 	struct Share *share = NULL;
 	LIST_FOREACH(share, &AllShares.shares_list){
-		acquire_spinlock(&AllShares.shareslock);
+		if (!holding_spinlock(&AllShares.shareslock))
+			acquire_spinlock(&AllShares.shareslock);
 		if (share->ownerID == e->env_id){
 			release_spinlock(&AllShares.shareslock);
 			free_share(share);
@@ -528,7 +529,10 @@ void env_free(struct Env *e)
 	//********************************************************************//
 	//    f) Freeing All page tables in the entire user virtual memory
 	//********************************************************************//
-
+	for(uint32 i = USER_HEAP_START; i < USER_HEAP_MAX;i+=PAGE_SIZE){
+		unmap_frame(e->env_page_directory, i);
+	}
+	cprintf("no of page indexes : %d\n",(USER_HEAP_MAX - USER_HEAP_START)/PAGE_SIZE);
 	uint32 USER_BOTTOM = PDX(USER_TOP);
 	//cprintf("User_bottom %d\n", USER_BOTTOM);
 	for (int index = 0 ; index < USER_BOTTOM ; index ++)
@@ -544,12 +548,12 @@ void env_free(struct Env *e)
 		uint32 *pageTablePtr = (uint32 *)kheap_virtual_address(pa);
 		uint32 va;
 
-		for (int index = 0 ; index < NPTENTRIES ; index ++)
+		for (int j = 0 ; j < NPTENTRIES ; j ++)
 		{
-			if (pageTablePtr[index] != 0)
+			if (pageTablePtr[j] != 0)
 			{
 				//cprintf("Page table ptr index %x \n", pageTablePtr[index]);
-				uint32 pa = EXTRACT_ADDRESS(pageTablePtr[index]);
+				uint32 pa = EXTRACT_ADDRESS(pageTablePtr[j]);
 				va = kheap_virtual_address(pa);
 				//cprintf("VA of a page table entry = %x\n", va);
 				unmap_frame(e->env_page_directory, va);
