@@ -280,8 +280,10 @@ void *krealloc(void *virtual_address, uint32 new_size)
 			return tmpva;
 		}
 		put.pageStatus[start_index] = size/PAGE_SIZE;
-		void* x = (void*)ROUNDUP(((vaRoundDown+new_size)),PAGE_SIZE);
-		kfree(x);
+		uint32 x = ROUNDUP(((vaRoundDown+new_size)),PAGE_SIZE);
+		int remains = old_size - new_size;
+		remains = ROUNDUP(remains,PAGE_SIZE)/PAGE_SIZE;
+		free_realloc( x, remains);
 		return virtual_address;
 	}
 	if(old_size == size)
@@ -359,5 +361,22 @@ void init(){
 	for(int i = 0; i < TOTAL_FRAMES;i++){
 		phys_to_virt[i] = -1;
 	}
+}
+
+void free_realloc(uint32 va,uint32 pages){
+	acquire_spinlock(&MemFrameLists.mfllock);
+	for(int i = 0;i < pages;i++){
+		uint32 *ptr_page_table = NULL;
+		struct FrameInfo *free_frame = get_frame_info(ptr_page_directory, va, &ptr_page_table);
+		if(free_frame == NULL) // Frame is free
+		{
+			release_spinlock(&MemFrameLists.mfllock);
+			return;
+		}
+		unmap_frame(ptr_page_directory, va);
+		va+=PAGE_SIZE;
+		phys_to_virt[FRAME_NUMBER(to_physical_address(free_frame))] = -1;
+	}
+	release_spinlock(&MemFrameLists.mfllock);
 }
 

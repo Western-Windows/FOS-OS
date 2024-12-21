@@ -40,7 +40,7 @@ unsigned int kheap_virtual_address(unsigned int physical_address);
 unsigned int kheap_physical_address(unsigned int virtual_address);
 void freePageStatus(int index,int size);
 int numOfKheapVACalls ;
-
+void free_realloc(uint32 va,uint32 pages);
 
 //TODO: [PROJECT'24.MS2 - #01] [1] KERNEL HEAP - add suitable code here
 
