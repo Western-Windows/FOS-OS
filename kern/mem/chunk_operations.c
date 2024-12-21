@@ -219,55 +219,14 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 			  env_page_ws_invalidate(e, l);
 			  l+=PAGE_SIZE;
 		}
-//		cprintf("BEFORE FREE THE CONDITION\n");
-//		env_page_ws_print(e);
-//		struct WorkingSetElement* lasts = e->page_last_WS_element;
-//		if (lasts == NULL)
-//		{
-////			cprintf("DA5lT NULL\n");
-//			return;
-//		}else{
-////			cprintf("DA5lT SAFE\n");
-//			struct WorkingSetElement* last = e->page_last_WS_element;
-//			struct WorkingSetElement* first = e->page_WS_list.lh_first;
-//			if (first != last)
-//			{
-//				struct WorkingSetElement* temp = last->prev_next_info.le_prev;
-//				e->page_WS_list.lh_last->prev_next_info.le_next = first; //Tail_Next yro7 lel Head
-//				first->prev_next_info.le_prev = e->page_WS_list.lh_last; //Head_Prev yro7 lel Tail
-//				temp->prev_next_info.le_next = NULL; //FIFO_PREV_Next = NULL
-//				e->page_WS_list.lh_last = temp; //Tail yro7 lel FIFO_PREV
-//				last->prev_next_info.le_prev = NULL; //FIFO_PREV = NULL
-//				e->page_WS_list.lh_first = last; //Head yro7 lel FIFO
-//
-//			}
-//		}
-//		struct WorkingSetElement* cur = e->page_WS_list.lh_first;
-//		struct WorkingSetElement* temp = cur ? cur->prev_next_info.le_next : NULL;
-//
-//		if (cur == NULL) return;
-//		if(temp == NULL) return;
-//
-//		e->page_WS_list.lh_first = temp;
-//		cur->prev_next_info.le_next = NULL;
-//
-//		e->page_WS_list.lh_last->prev_next_info.le_next = cur;
-//		cur->prev_next_info.le_prev = e->page_WS_list.lh_last;
-//		e->page_WS_list.lh_last = cur;
-//
-//		temp->prev_next_info.le_prev = NULL;
-//
-//		return;
-//		cprintf("AFTER FREE THE CONDITION\n");
-//		env_page_ws_print(e);
-
-
-
+		if(e->page_WS_list.lh_first == NULL || e->page_last_WS_element == NULL)
+			return;
 		struct WorkingSetElement* last_ws = e->page_last_WS_element;
 		struct WorkingSetElement* head = e->page_WS_list.lh_first;
 		if(head->prev_next_info.le_next == NULL){
 			return;
 		}
+
 		if (head == last_ws) {
 			return;
 		}
