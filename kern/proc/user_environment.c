@@ -497,15 +497,15 @@ void env_free(struct Env *e)
 	LIST_INIT(&e->page_WS_list);
 	e->page_last_WS_element = NULL;
 
-	cprintf("All pages in the page working set have been freed.\n");
-	cprintf("Page working set have been freed.\n");
+//	cprintf("All pages in the page working set have been freed.\n");
+//	cprintf("Page working set have been freed.\n");
 
 	//********************************************************************//
 	//                    c) Freeing user kernel stack
 	//********************************************************************//
 
 	delete_user_kern_stack(e);
-	cprintf("User kernel stack has been freed.\n");
+//	cprintf("User kernel stack has been freed.\n");
 
 
 	//********************************************************************//
