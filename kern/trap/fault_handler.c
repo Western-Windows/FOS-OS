@@ -273,72 +273,86 @@ void page_fault_handler(struct Env * faulted_env, uint32 fault_va)
 	}
 	else
 	{
-		//cprintf("REPLACEMENT=========================WS Size = %d\n", wsSize );
 		//refer to the project presentation and documentation for details
 		//TODO: [PROJECT'24.MS3] [2] FAULT HANDLER II - Replacement
 		//Write your code here, remove the panic and write your code
 		//panic("page_fault_handler() Replacement is not implemented yet...!!");
 
+/* sensi was on fire, trying to solve the page replacement problem... but as ideas collided, chaos broke loose! The code? A ticking time bomb of PANIC!!!.
+ * Now, the task has fallen to YOU "the chosen one" to restore order and save OS!
+ * Here’s the mission: You’ve got a working set of size n and need to implement the Nth-Chance Replacement Algorithm. Your ultimate goal?
+ * Replace the victim page, but there’s a catch:
+ * Nth Chances: Every page gets N chances before being considered for eviction. You must count up to N accesses for each page.
+ * Used Pages: If a page has been accessed recently, reset its status and continue the process.
+ * Modified Pages: If a page has been modified, you MUST write its changes to disk before replacing it.
+ * The Rules of the Game:
+ * LLONG_MIN <= page_WS_max_sweeps < LLONG_MAX -> max number of sweeps!.
+ * 0 < N <= page_WS_max_sweeps —> the number of chances each page gets.
+ * 0 < n <= page_WS_max_sweeps —> the size of your working set.
+ * You’ve got the skills, but can you handle the pressure? Implement it efficiently, dodge the pitfalls, and claim "Winner Winner Chicken Dinner".
+ * remember, the OS is counting on you don’t let it down!
+ * */
+		//cprintf("REPLACEMENT=========================WS Size = %d\n", wsSize );
 
+		int N = (page_WS_max_sweeps >= 0) ? page_WS_max_sweeps : -page_WS_max_sweeps;
+		bool found = false;
+		if (LIST_EMPTY(&(faulted_env->page_WS_list))) {
+		    return;
+		}
 
-//		        cprintf("working set state before replacement:\n");
-//		        env_page_ws_print(faulted_env);
-		        while (true) {
-		            uint32 permissions = pt_get_page_permissions(faulted_env->env_page_directory, faulted_env->page_last_WS_element->virtual_address);
-		            bool used = ((permissions & PERM_USED)==PERM_USED);
+		struct WorkingSetElement *cur_ptr = faulted_env->page_last_WS_element;
+		if (cur_ptr == NULL) {
+		    cur_ptr = LIST_FIRST(&(faulted_env->page_WS_list));
+		}
 
-		            if (used) {
-		            	faulted_env->page_last_WS_element->sweeps_counter = 0;
-		            	pt_set_page_permissions(faulted_env->env_page_directory, faulted_env->page_last_WS_element->virtual_address, 0, PERM_USED);
-//		                cprintf("cleared PERM_USED va=0x%x, sweeps_cnt reset to 0\n", faulted_env->page_last_WS_element->virtual_address);
-		            } else {
-		            	int max_chances = (page_WS_max_sweeps >= 0 ? page_WS_max_sweeps : -page_WS_max_sweeps);
-		            	bool modified = ((permissions & PERM_MODIFIED) == PERM_MODIFIED);
-		                faulted_env->page_last_WS_element->sweeps_counter++;
-//		                cprintf("incrment sweep count va=0x%x to %d\n", faulted_env->page_last_WS_element->virtual_address,  faulted_env->page_last_WS_element->sweeps_counter);
-		                int effective_chances = ((modified && page_WS_max_sweeps<0)? max_chances+1:max_chances);
-		                if (faulted_env->page_last_WS_element->sweeps_counter >= effective_chances) {
-//		                    cprintf("page replacement triggered va=0x%x\n", faulted_env->page_last_WS_element->virtual_address);
-		                    uint32 replaced_va = faulted_env->page_last_WS_element->virtual_address;
+		for (;!found;) {
+		    cur_ptr = faulted_env->page_last_WS_element;
+		    if (cur_ptr == NULL) {
+		        cur_ptr = LIST_FIRST(&(faulted_env->page_WS_list));
+		    }
+		    uint32 permissions = pt_get_page_permissions(faulted_env->env_page_directory, cur_ptr->virtual_address);
+		    bool used = ((permissions & PERM_USED) == PERM_USED);
 
-
-		                    if (modified) {
-		                    	uint32 *ptr_page_table = NULL;
-		                        struct FrameInfo *frame_info = get_frame_info(faulted_env->env_page_directory, faulted_env->page_last_WS_element->virtual_address, &ptr_page_table);
-		                        if (frame_info != NULL) {
-		                        	pt_set_page_permissions(faulted_env->env_page_directory, faulted_env->page_last_WS_element->virtual_address, 0, PERM_MODIFIED);
-		                        	pf_update_env_page(faulted_env, faulted_env->page_last_WS_element->virtual_address, frame_info);
-		                        }
-
-		                    }
-
-		                    unmap_frame(faulted_env->env_page_directory,replaced_va);
-		                    struct FrameInfo *new_frame = NULL;
-		                    allocate_frame(&new_frame);
-
-		                    map_frame(faulted_env->env_page_directory,new_frame,fault_va,PERM_USER|PERM_WRITEABLE);
-		                    uint32 page = pf_read_env_page(faulted_env, (void*) fault_va);
-
-		                    faulted_env->page_last_WS_element->virtual_address = fault_va;
-		                    faulted_env->page_last_WS_element->sweeps_counter = 0;
-
-		                    faulted_env->page_last_WS_element = LIST_NEXT(faulted_env->page_last_WS_element);
-		                    if (faulted_env->page_last_WS_element == NULL) {
-		                        faulted_env->page_last_WS_element = LIST_FIRST(&(faulted_env->page_WS_list));
-		                    }
-		                    break;
-		                }
-
-		            }
-
-			faulted_env->page_last_WS_element = LIST_NEXT(faulted_env->page_last_WS_element);
-			if(faulted_env->page_last_WS_element == NULL) {
-				 faulted_env->page_last_WS_element = LIST_FIRST(&(faulted_env->page_WS_list));
-				}
+		    if (!used) {
+		        cur_ptr->sweeps_counter += N;
+		    } else {
+		        pt_set_page_permissions(faulted_env->env_page_directory, cur_ptr->virtual_address, 0, PERM_USED);
+		        cur_ptr->sweeps_counter = 0;
 		    }
 
-//		        cprintf("working set after replacement:\n");
-//		        env_page_ws_print(faulted_env);
+		    bool modified = ((permissions & PERM_MODIFIED) == PERM_MODIFIED);
+		    int checker = (modified && page_WS_max_sweeps<0)? N+1 : N;
+
+		    if (cur_ptr->sweeps_counter >= checker) {
+		        uint32 cur_va = cur_ptr->virtual_address;
+
+		        if (modified) {
+		            uint32 *table_page = NULL;
+		            struct FrameInfo *frame_info = get_frame_info(faulted_env->env_page_directory, cur_va, &table_page);
+		            if (frame_info != NULL) {
+		                pt_set_page_permissions(faulted_env->env_page_directory, cur_va, 0, PERM_MODIFIED);
+		                pf_update_env_page(faulted_env, cur_va, frame_info);
+		            }
+		        }
+
+		        unmap_frame(faulted_env->env_page_directory, cur_va);
+		        struct FrameInfo *frame = NULL;
+		        if (allocate_frame(&frame) != 0) {
+		        	return;
+		        }
+
+		        map_frame(faulted_env->env_page_directory, frame, fault_va, PERM_USER|PERM_WRITEABLE|PERM_PRESENT);
+		        pf_read_env_page(faulted_env, (void *)fault_va);
+
+		        cur_ptr->virtual_address = fault_va;
+		        cur_ptr->sweeps_counter = 0;
+		        found = true;
+		    }
+
+		    faulted_env->page_last_WS_element = LIST_NEXT(cur_ptr);
+		    if (faulted_env->page_last_WS_element == NULL)
+		        faulted_env->page_last_WS_element = LIST_FIRST(&(faulted_env->page_WS_list));
+		}
 
 	}
 }
